@@ -1,5 +1,4 @@
-import Joi from "joi";
-import mongoose from "mongoose";
+const mongoose = require("mongoose");
 
 const userSchema = new mongoose.Schema({
   name: {
@@ -24,4 +23,5 @@ const userSchema = new mongoose.Schema({
   isAdmin: Boolean,
 });
 
-export const User = mongoose.model("User", userSchema);
+const User = mongoose.model("User", userSchema);
+module.exports = User;

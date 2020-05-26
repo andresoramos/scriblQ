@@ -8,6 +8,6 @@
     "hostname": "localhost",
     "schema": "ScriblQ"
   },
-  "port": "3900",
+  "port": "5000",
   "requiresAuth": true
 }

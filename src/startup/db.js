@@ -1,8 +1,8 @@
-import winston from "winston";
-import mongoose from "mongoose";
-import config from "config";
+const winston = require("winston");
+const mongoose = require("mongoose");
+const config = require("config");
 
-export function dbStartUp() {
+function dbStartUp() {
   const db = config.get("db");
   const connString =
     db.proto +
@@ -15,3 +15,5 @@ export function dbStartUp() {
     .connect(connString)
     .then(() => winston.info(`Connected to ${connString}...`));
 }
+
+module.exports = dbStartUp;

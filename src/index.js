@@ -1,7 +1,7 @@
-import express from "express";
-import config from "config";
-import { loadAllRoutes } from "./startup/routes";
-import { dbStartUp } from "./startup/db";
+const express = require("express");
+const config = require("config");
+const loadAllRoutes = require("./startup/routes");
+const dbStartUp = require("./startup/db");
 const app = express();
 
 loadAllRoutes(app);
