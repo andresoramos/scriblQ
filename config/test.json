@@ -1,0 +1,6 @@
+{
+  "jwtPrivateKey": "1234",
+  "db": {
+    "schema": "ScriblQ_tests"
+  }
+}

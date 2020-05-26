@@ -1,0 +1,13 @@
+{
+  "name": "default",
+  "jwtPrivateKey": "unsecureKey",
+  "db": {
+    "proto": "mongodb",
+    "username": "",
+    "password": "",
+    "hostname": "localhost",
+    "schema": "ScriblQ"
+  },
+  "port": "3900",
+  "requiresAuth": true
+}
