@@ -4,6 +4,16 @@ const loadAllRoutes = require("./startup/routes");
 const dbStartUp = require("./startup/db");
 const app = express();
 
+const cors = require("cors");
+
+const corsOptions = {
+  exposedHeaders: ["Authorization", "x-auth-token"],
+};
+
+app.use(cors(corsOptions));
+// const cors = require("cors");
+
+// app.use(cors());
 loadAllRoutes(app);
 dbStartUp();
 
