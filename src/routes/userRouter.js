@@ -5,6 +5,8 @@ const bcrypt = require("bcrypt");
 const _ = require("lodash");
 
 userRouter.get("/", async (req, res) => {
+  var ip = req.ip;
+  console.log(ip, "this is the ip");
   const users = await User.find();
   if (users) {
     return res.send(users);
@@ -14,7 +16,6 @@ userRouter.get("/", async (req, res) => {
 userRouter.post("/", async (req, res) => {
   const valid = validateUser(req.body);
   if (valid.error) {
-    console.log(valid.error.details[0].message);
     return res.status(400).send(valid.error.details[0].message);
   }
 
@@ -32,12 +33,13 @@ userRouter.post("/", async (req, res) => {
     }
     let user = await new User({ name, email, password });
     const salt = await bcrypt.genSalt(10);
-    user.password = await bcrypt.hash(user.password, 10);
+    user.password = await bcrypt.hash(user.password, salt);
     await user.save();
 
     const token = user.generateAuthToken();
     res
       .header("x-auth-token", token)
+      .header("name-token", name)
       .send(_.pick(user, ["_id", "name", "email"]));
     console.log("code is getting here");
   } catch (error) {

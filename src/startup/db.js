@@ -1,6 +1,7 @@
 const winston = require("winston");
 const mongoose = require("mongoose");
 const config = require("config");
+mongoose.set("useFindAndModify", false);
 
 function dbStartUp() {
   const db = config.get("db");

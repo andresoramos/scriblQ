@@ -5,16 +5,27 @@ const { User } = require("../models/Users");
 const authRouter = express.Router();
 const Joi = require("@hapi/joi");
 const _ = require("lodash");
+
+// function trackIp (req){
+//   const ip = req.ip;
+//   let ipTracker = {};
+//   if(!ipTracker.ip)
+//   ipTracker.ip = ip
+
+// }
+
 authRouter.post("/", async (req, res) => {
   const { error } = validate(req.body);
   if (error) {
     return res.status(400).send(error.details[0].message);
   }
   let user = await User.find();
+
   let name;
 
   for (var i = 0; i < user.length; i++) {
-    if (user[i].name === req.body.name || user[i].email === req.body.email) {
+    if (user[i].name === req.body.name || user[i].email === req.body.name) {
+      console.log("A MATCH WAS FOUND");
       const validPassword = await bcrypt.compare(
         req.body.password,
         user[i].password
@@ -30,6 +41,7 @@ authRouter.post("/", async (req, res) => {
   if (token) {
     return res
       .header("x-auth-token", token)
+      .header("name-token", name.name)
       .send(_.pick(user, ["_id", "name", "email"]));
   }
   return res.status(400).send("Email or password are incorrect");
