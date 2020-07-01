@@ -5,6 +5,7 @@ const reset = require("../routes/passwordReset");
 const tokensRouter = require("../routes/tokens");
 const trackIpRouter = require("../routes/trackIp");
 const lockedOutRouter = require("../routes/lockedOut");
+
 function loadAllRoutes(app) {
   app.use(express.json());
   app.use("/api/users", userRouter);
