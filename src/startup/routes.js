@@ -5,6 +5,7 @@ const reset = require("../routes/passwordReset");
 const tokensRouter = require("../routes/tokens");
 const trackIpRouter = require("../routes/trackIp");
 const lockedOutRouter = require("../routes/lockedOut");
+const quizRouter = require("../routes/quiz");
 
 function loadAllRoutes(app) {
   app.use(express.json());
@@ -14,6 +15,7 @@ function loadAllRoutes(app) {
   app.use("/api/passwordReset", reset);
   app.use("/api/ipTracker", trackIpRouter);
   app.use("/api/lockedOut", lockedOutRouter);
+  app.use("/api/quizzes", quizRouter);
 }
 
 module.exports = loadAllRoutes;
