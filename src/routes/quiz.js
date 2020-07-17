@@ -1,6 +1,6 @@
 const express = require("express");
 const quizRouter = express.Router();
-const { Quiz, validateUser, validatePost } = require("../models/Quiz");
+const { Quiz, validateUser } = require("../models/Quiz");
 const { find } = require("lodash");
 
 // lockedOutRouter.put("/expiredBans/:id", async (req, res) => {
@@ -47,8 +47,36 @@ quizRouter.get("/", async (req, res) => {
   }
 });
 
+quizRouter.put("/:id", async (req, res) => {
+  try {
+    console.log("hitting the put block");
+    // const { error } = validateUser(req.body);
+    // if (error) {
+    //   console.log(error.details[0].message);
+    //   return res.status(400).send(error.details[0].message);
+    // }
+
+    const updated = await Quiz.update(
+      { _id: req.params.id },
+      {
+        $set: {
+          questions: {
+            [index]: {
+              question: { question: req.body.question.question, edited: true },
+              answers: req.body.answers,
+            },
+          },
+        },
+      }
+    );
+  } catch (err) {
+    console.log(err, "This is the put error from quizRouter in quiz.js");
+  }
+});
+
 quizRouter.post("/", async (req, res) => {
   try {
+    console.log(req.body, "where is index");
     const { error } = validateUser(req.body);
     if (error) {
       console.log(error.details[0].message);
@@ -60,57 +88,44 @@ quizRouter.post("/", async (req, res) => {
       for (var i = 0; i < findQuiz.length; i++) {
         if (findQuiz[i].name === req.body.name) {
           quiz = findQuiz[i];
+          const updated = await Quiz.update(
+            { _id: quiz._id },
+            { $set: { questions: req.body.questions } }
+          );
         }
       }
+      if (quiz === undefined) {
+        const newQuiz = await createQuiz(quiz, req);
+        return res.send(newQuiz);
+      }
     } else {
-      quiz = { name: req.body.name, questions: {} };
-      console.log(quiz, "<---- req.body");
-      const questions = questionCount(
-        quiz.questions,
-        req.body.questions,
-        req.body.answer
-      );
-      quiz.questions = questions;
-
-      const newQuiz = new Quiz(quiz);
-      await newQuiz.save();
+      console.log("entering the point of creation");
+      const newQuiz = await createQuiz(quiz, req);
       return res.send(newQuiz);
     }
-    const updatedQuestions = questionCount(
-      quiz.questions,
-      req.body.questions,
-      req.body.answer
-    );
-    const updated = await Quiz.update(
-      { _id: quiz._id },
-      { $set: { questions: updatedQuestions } }
-    );
-    res.send("Object should be updated");
+    //   console.log("This process ended with a put");
+    //   const updatedQuestions = questionCount(
+    //     quiz.questions,
+    //     req.body.questions,
+    //     req.body.answer
+    //   );
+    //   const updated = await Quiz.update(
+    //     { _id: quiz._id },
+    //     { $set: { questions: updatedQuestions } }
+    //   );
+    //   res.send("Object should be updated");
   } catch (err) {
     console.log(err, "Error from quiz.js route.");
   }
 });
-// lockedOutRouter.get("/", async (req, res) => {
-//   const lockedOut = await LockedOut.find();
-//   res.send(lockedOut);
-// });
-const questionCount = (obj, question, answers) => {
-  console.log(question, "QUESTIONS");
-  if (obj["1"] === undefined) {
-    console.log("butt" === "butt");
-    obj["1"] = { question, answers };
-    return obj;
-  }
-  let number = 0;
-  for (var key in obj) {
-    if (Number(key) > number) {
-      number = Number(key);
-    }
-  }
-  number += 1;
-  console.log(number, "Is something wrong with number");
-  obj[number] = { question, answers };
-  return obj;
+
+const createQuiz = async (quiz, req) => {
+  quiz = { name: req.body.name, questions: req.body.questions };
+
+  console.log(quiz, "These are our questions");
+  const newQuiz = new Quiz(quiz);
+  await newQuiz.save();
+  return newQuiz;
 };
 
 module.exports = quizRouter;

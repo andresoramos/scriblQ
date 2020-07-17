@@ -25,7 +25,6 @@ authRouter.post("/", async (req, res) => {
 
   for (var i = 0; i < user.length; i++) {
     if (user[i].name === req.body.name || user[i].email === req.body.name) {
-      console.log("A MATCH WAS FOUND");
       const validPassword = await bcrypt.compare(
         req.body.password,
         user[i].password

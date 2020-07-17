@@ -16,7 +16,7 @@ const userSchema = new mongoose.Schema({
     required: true,
   },
   questions: {
-    type: Object,
+    type: Array,
     required: true,
   },
 });
@@ -24,19 +24,11 @@ const userSchema = new mongoose.Schema({
 function validateUser(quiz) {
   const schema = Joi.object({
     name: Joi.string().required(),
-    questions: Joi.object().required(),
-    answer: Joi.array().required(),
+    questions: Joi.array().required(),
   });
 
-  return ({ error, value } = schema.validate(quiz));
-}
-
-function validatePost(quiz) {
-  const schema = Joi.object({
-    ips: Joi.object().required(),
-  });
   return ({ error, value } = schema.validate(quiz));
 }
 
 const Quiz = mongoose.model("Quiz", userSchema);
-module.exports = { Quiz, validateUser, validatePost };
+module.exports = { Quiz, validateUser };
