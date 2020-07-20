@@ -20,18 +20,6 @@ trackIpRouter.put("/:id", async (req, res) => {
   if (updated) {
     return res.send({ response: updated });
   }
-  //find ip address.
-  //check to see if the ip is banned
-  //find the ip tracking object
-  //check to see if the ip exists as a property of the object
-  //if it doesn't, create it
-  //if it exists, add it to the array assigned to the property
-  //subtract time stamp at position 0 from the last one in the array
-  //If amount is five minutes or less, check to see how many attempts in array
-  //if array has less than 20, nothing else needs to be done
-  //if array has more 20 or more, ip must be banned
-  //if time difference is more than five minutes, all but the last
-  //one will be deleted
 });
 
 trackIpRouter.post("/", async (req, res) => {

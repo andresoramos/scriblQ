@@ -1,42 +1,9 @@
 const express = require("express");
 const quizRouter = express.Router();
 const { Quiz, validateUser } = require("../models/Quiz");
+const { UserAccount, validateAccount } = require("../models/UserAccount");
+const { User } = require("../models/Users");
 const { find } = require("lodash");
-
-// lockedOutRouter.put("/expiredBans/:id", async (req, res) => {
-//   const { error } = validateBannedFix(req.body);
-//   if (error) {
-//     console.log(error.details[0].message);
-//     return res.status(400).send(error.details[0].message);
-//   }
-//   const id = req.params.id;
-//   const lockedOut = await LockedOut.findById(id);
-//   const newLockedOut = { ...lockedOut._doc.ips };
-//   newLockedOut.banned = req.body.duplicateArr;
-//   const updated = await LockedOut.update(
-//     { _id: req.params.id },
-//     { $set: { ips: newLockedOut } }
-//   );
-//   if (updated) {
-//     return res.send({ response: updated });
-//   }
-// });
-
-// lockedOutRouter.put("/:id", async (req, res) => {
-//   const { error } = validateUser(req.body);
-//   if (error) {
-//     console.log(error.details[0].message);
-//     return res.status(400).send(error.details[0].message);
-//   }
-
-//   const updated = await LockedOut.update(
-//     { _id: req.params.id },
-//     { $set: { ips: req.body.ips } }
-//   );
-//   if (updated) {
-//     return res.send({ response: updated });
-//   }
-// });
 
 quizRouter.get("/", async (req, res) => {
   try {
@@ -76,7 +43,7 @@ quizRouter.put("/:id", async (req, res) => {
 
 quizRouter.post("/", async (req, res) => {
   try {
-    console.log(req.body, "where is index");
+    console.log(req.body, "This is array entering");
     const { error } = validateUser(req.body);
     if (error) {
       console.log(error.details[0].message);
@@ -85,13 +52,16 @@ quizRouter.post("/", async (req, res) => {
     const findQuiz = await Quiz.find();
     let quiz;
     if (findQuiz.length !== 0) {
+      console.log("we found more than one quiz");
       for (var i = 0; i < findQuiz.length; i++) {
         if (findQuiz[i].name === req.body.name) {
+          console.log("we have found quiz and it should be updating");
           quiz = findQuiz[i];
           const updated = await Quiz.update(
             { _id: quiz._id },
             { $set: { questions: req.body.questions } }
           );
+          console.log("updating finished");
         }
       }
       if (quiz === undefined) {
@@ -103,17 +73,56 @@ quizRouter.post("/", async (req, res) => {
       const newQuiz = await createQuiz(quiz, req);
       return res.send(newQuiz);
     }
-    //   console.log("This process ended with a put");
-    //   const updatedQuestions = questionCount(
-    //     quiz.questions,
-    //     req.body.questions,
-    //     req.body.answer
-    //   );
-    //   const updated = await Quiz.update(
-    //     { _id: quiz._id },
-    //     { $set: { questions: updatedQuestions } }
-    //   );
-    //   res.send("Object should be updated");
+  } catch (err) {
+    console.log(err, "Error from quiz.js route.");
+  }
+});
+
+quizRouter.post("/saveQuiz", async (req, res) => {
+  try {
+    console.log(req.body, "this is what you're passing in");
+    // console.log(req.body, "This is array entering");
+    // const { error } = validateAccount(req.body);
+    // if (error) {
+    //   console.log(error.details[0].message);
+    //   return res.status(400).send(error.details[0].message);
+    // }
+    const findUser = await User.findById(req.userId);
+    const findQuiz = await Quiz.findById(req.quizId);
+
+    if (!findUser || findQuiz) {
+      res.status(400).send("User or quiz not found.");
+    }
+
+    const findAccount = await UserAccount.find();
+    let presentAccount;
+    for (var i = 0; i < findAccount.length; i++) {
+      console.log(typeof findAccount[i]._id);
+    }
+
+    // let quiz;
+    // if (findQuiz.length !== 0) {
+    //   console.log("we found more than one quiz");
+    //   for (var i = 0; i < findQuiz.length; i++) {
+    //     if (findQuiz[i].name === req.body.name) {
+    //       console.log("we have found quiz and it should be updating");
+    //       quiz = findQuiz[i];
+    //       const updated = await Quiz.update(
+    //         { _id: quiz._id },
+    //         { $set: { questions: req.body.questions } }
+    //       );
+    //       console.log("updating finished");
+    //     }
+    //   }
+    //   if (quiz === undefined) {
+    //     const newQuiz = await createQuiz(quiz, req);
+    //     return res.send(newQuiz);
+    //   }
+    // } else {
+    //   console.log("entering the point of creation");
+    //   const newQuiz = await createQuiz(quiz, req);
+    //   return res.send(newQuiz);
+    // }
   } catch (err) {
     console.log(err, "Error from quiz.js route.");
   }
