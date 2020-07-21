@@ -3,20 +3,17 @@ const quizRouter = express.Router();
 const { Quiz, validateUser } = require("../models/Quiz");
 const { UserAccount, validateAccount } = require("../models/UserAccount");
 const { User } = require("../models/Users");
-const { find } = require("lodash");
+const { find, update } = require("lodash");
 
 quizRouter.get("/", async (req, res) => {
   try {
     const quiz = await Quiz.find();
     res.send(quiz);
-  } catch (err) {
-    console.log(err, "This is the error from quizRouter in quiz.js");
-  }
+  } catch (err) {}
 });
 
 quizRouter.put("/:id", async (req, res) => {
   try {
-    console.log("hitting the put block");
     // const { error } = validateUser(req.body);
     // if (error) {
     //   console.log(error.details[0].message);
@@ -36,14 +33,11 @@ quizRouter.put("/:id", async (req, res) => {
         },
       }
     );
-  } catch (err) {
-    console.log(err, "This is the put error from quizRouter in quiz.js");
-  }
+  } catch (err) {}
 });
 
 quizRouter.post("/", async (req, res) => {
   try {
-    console.log(req.body, "This is array entering");
     const { error } = validateUser(req.body);
     if (error) {
       console.log(error.details[0].message);
@@ -52,16 +46,13 @@ quizRouter.post("/", async (req, res) => {
     const findQuiz = await Quiz.find();
     let quiz;
     if (findQuiz.length !== 0) {
-      console.log("we found more than one quiz");
       for (var i = 0; i < findQuiz.length; i++) {
         if (findQuiz[i].name === req.body.name) {
-          console.log("we have found quiz and it should be updating");
           quiz = findQuiz[i];
           const updated = await Quiz.update(
             { _id: quiz._id },
             { $set: { questions: req.body.questions } }
           );
-          console.log("updating finished");
         }
       }
       if (quiz === undefined) {
@@ -69,7 +60,6 @@ quizRouter.post("/", async (req, res) => {
         return res.send(newQuiz);
       }
     } else {
-      console.log("entering the point of creation");
       const newQuiz = await createQuiz(quiz, req);
       return res.send(newQuiz);
     }
@@ -80,49 +70,47 @@ quizRouter.post("/", async (req, res) => {
 
 quizRouter.post("/saveQuiz", async (req, res) => {
   try {
-    console.log(req.body, "this is what you're passing in");
-    // console.log(req.body, "This is array entering");
-    // const { error } = validateAccount(req.body);
-    // if (error) {
-    //   console.log(error.details[0].message);
-    //   return res.status(400).send(error.details[0].message);
-    // }
-    const findUser = await User.findById(req.userId);
-    const findQuiz = await Quiz.findById(req.quizId);
-
-    if (!findUser || findQuiz) {
-      res.status(400).send("User or quiz not found.");
+    const { error } = validateAccount(req.body);
+    if (error) {
+      console.log(error.details[0].message);
+      return res.status(400).send(error.details[0].message);
     }
+    const findUser = await User.findOne({ email: req.body.email });
+    const userId = findUser._id;
+    const findQuiz = await Quiz.findOne({ name: req.body.name });
+    const quizId = findQuiz._id;
+    const checkForAccount = await UserAccount.findOne({ userId });
+    if (checkForAccount) {
+      const updatedQuiz = await Quiz.findOne({ _id: quizId });
+      const newArray = [...checkForAccount.quizzes];
+      for (var i = 0; i < newArray.length; i++) {
+        if (JSON.stringify(newArray[i].quizId) === JSON.stringify(quizId)) {
+          return res.status(400).send("This quiz is already in our database");
+        }
+      }
 
-    const findAccount = await UserAccount.find();
-    let presentAccount;
-    for (var i = 0; i < findAccount.length; i++) {
-      console.log(typeof findAccount[i]._id);
+      const newQuizObj = {
+        quizId: updatedQuiz._id,
+        dateCreated: new Date(Date.now()),
+        likes: 0,
+        dislikes: 0,
+      };
+
+      newArray.push(newQuizObj);
+      const savedQuiz = await UserAccount.update(
+        { _id: checkForAccount._id },
+        { $set: { quizzes: newArray } }
+      );
+      return res.send(savedQuiz);
     }
-
-    // let quiz;
-    // if (findQuiz.length !== 0) {
-    //   console.log("we found more than one quiz");
-    //   for (var i = 0; i < findQuiz.length; i++) {
-    //     if (findQuiz[i].name === req.body.name) {
-    //       console.log("we have found quiz and it should be updating");
-    //       quiz = findQuiz[i];
-    //       const updated = await Quiz.update(
-    //         { _id: quiz._id },
-    //         { $set: { questions: req.body.questions } }
-    //       );
-    //       console.log("updating finished");
-    //     }
-    //   }
-    //   if (quiz === undefined) {
-    //     const newQuiz = await createQuiz(quiz, req);
-    //     return res.send(newQuiz);
-    //   }
-    // } else {
-    //   console.log("entering the point of creation");
-    //   const newQuiz = await createQuiz(quiz, req);
-    //   return res.send(newQuiz);
-    // }
+    const quizObj = { quizId, dateCreated: new Date(Date.now()) };
+    const quizProfile = {
+      userId: userId,
+      quizzes: [quizObj],
+    };
+    const newProfile = await new UserAccount(quizProfile);
+    newProfile.save();
+    res.send(newProfile);
   } catch (err) {
     console.log(err, "Error from quiz.js route.");
   }

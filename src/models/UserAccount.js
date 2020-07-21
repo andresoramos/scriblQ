@@ -4,7 +4,7 @@ const _ = require("lodash");
 
 const userSchema = new mongoose.Schema({
   userId: {
-    type: String,
+    type: Object,
     required: true,
   },
   quizzes: {
@@ -15,8 +15,9 @@ const userSchema = new mongoose.Schema({
 
 function validateAccount(quiz) {
   const schema = Joi.object({
-    userId: Joi.string().required(),
-    quizzes: Joi.array().required(),
+    user: Joi.string().required(),
+    name: Joi.string().required(),
+    email: Joi.string().required(),
   });
 
   return ({ error, value } = schema.validate(quiz));
