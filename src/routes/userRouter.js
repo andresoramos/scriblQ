@@ -3,6 +3,7 @@ const { User, validateUser } = require("../models/Users");
 const userRouter = express.Router();
 const bcrypt = require("bcrypt");
 const _ = require("lodash");
+const decode = require("jwt-decode");
 
 userRouter.get("/", async (req, res) => {
   var ip = req.ip;
@@ -11,8 +12,30 @@ userRouter.get("/", async (req, res) => {
   if (users) {
     return res.send(users);
   }
-  res.send("Connection isn't working");
 });
+
+userRouter.post("/exists", async (req, res) => {
+  if (typeof req.body.token !== "string" || req.body.token.length > 20000) {
+    return res.status(400).send("Invalid user.");
+  }
+  const token = req.body.token;
+  let decodedToken;
+  try {
+    decodedToken = decode(token);
+  } catch (err) {
+    console.log(err, "Decoding email failed in userRouter.js");
+  }
+  if (decodedToken === undefined) {
+    return res.send(false);
+  }
+  const email = decodedToken.email;
+  console.log(email, "this is the email");
+  const userFound = await User.findOne({ email: email });
+  if (userFound) {
+    return res.send(true);
+  }
+});
+
 userRouter.post("/", async (req, res) => {
   const valid = validateUser(req.body);
   if (valid.error) {

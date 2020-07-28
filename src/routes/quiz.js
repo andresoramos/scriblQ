@@ -4,11 +4,65 @@ const { Quiz, validateUser } = require("../models/Quiz");
 const { UserAccount, validateAccount } = require("../models/UserAccount");
 const { User } = require("../models/Users");
 const { find, update } = require("lodash");
+const e = require("express");
 
 quizRouter.get("/", async (req, res) => {
   try {
     const quiz = await Quiz.find();
     res.send(quiz);
+  } catch (err) {}
+});
+quizRouter.delete("/:id", async (req, res) => {
+  console.log("Tapping the butt");
+  const deleteTest = await Quiz.findByIdAndRemove(req.params.id);
+  res.send(deleteTest);
+});
+quizRouter.put("/deleteQuiz", async (req, res) => {
+  try {
+    const user = await User.findOne({ email: req.body.email });
+    const userId = user._id;
+    const findAccount = await UserAccount.findOne({ userId });
+    const pruneQuizArray = [...findAccount.quizzes];
+    const index = req.body.id;
+    const secondQuizCopy = [...pruneQuizArray];
+    const quizId = secondQuizCopy[index].quizId;
+    pruneQuizArray.splice(index, 1);
+    console.log("Not past updated");
+    const updated = await UserAccount.update(
+      { _id: findAccount._id },
+      { $set: { quizzes: pruneQuizArray } }
+    );
+
+    res.send(findAccount);
+    const deleteThis = await Quiz.findByIdAndRemove(quizId);
+  } catch (error) {
+    console.log("this is your error: ", error);
+  }
+});
+
+quizRouter.post("/savedQuiz", async (req, res) => {
+  try {
+    const user = await User.findOne({ email: req.body.email });
+    const userId = user._id;
+    const userAccounts = await UserAccount.find();
+    let sentBack;
+    for (var i = 0; i < userAccounts.length; i++) {
+      if (JSON.stringify(userId) === JSON.stringify(userAccounts[i].userId)) {
+        sentBack = { ...userAccounts[i]._doc };
+        sentBack.user = await User.findOne({ _id: userAccounts[i].userId });
+        const quizUpdate = [...userAccounts[i].quizzes];
+        for (var j = 0; j < quizUpdate.length; j++) {
+          const dateCreated = quizUpdate[j].dateCreated;
+          quizUpdate[j] = {
+            quiz: await Quiz.findOne({ _id: quizUpdate[j].quizId }),
+            dateCreated: dateCreated,
+          };
+          sentBack.quizzes = quizUpdate;
+          delete sentBack.userId;
+        }
+      }
+    }
+    res.send(sentBack);
   } catch (err) {}
 });
 
@@ -119,7 +173,6 @@ quizRouter.post("/saveQuiz", async (req, res) => {
 const createQuiz = async (quiz, req) => {
   quiz = { name: req.body.name, questions: req.body.questions };
 
-  console.log(quiz, "These are our questions");
   const newQuiz = new Quiz(quiz);
   await newQuiz.save();
   return newQuiz;
