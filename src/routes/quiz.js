@@ -3,8 +3,9 @@ const quizRouter = express.Router();
 const { Quiz, validateUser } = require("../models/Quiz");
 const { UserAccount, validateAccount } = require("../models/UserAccount");
 const { User } = require("../models/Users");
+const { ScoredQuiz, validateScoredObject } = require("../models/ScoredQuiz");
 const { find, update } = require("lodash");
-const e = require("express");
+const createDate = require("../Services/createDate");
 
 quizRouter.get("/", async (req, res) => {
   try {
@@ -12,10 +13,56 @@ quizRouter.get("/", async (req, res) => {
     res.send(quiz);
   } catch (err) {}
 });
-quizRouter.delete("/:id", async (req, res) => {
-  console.log("Tapping the butt");
-  const deleteTest = await Quiz.findByIdAndRemove(req.params.id);
-  res.send(deleteTest);
+
+quizRouter.post("/ScoredQuiz", async (req, res) => {
+  console.log(req.body, "check earned");
+  const { error } = validateScoredObject(req.body);
+  if (error) {
+    console.log(error.details[0].message);
+    return res.status(400).send(error.details[0].message);
+  }
+  const newDate = new Date(Date.now());
+  const stringDate = JSON.stringify(newDate);
+  const prunedDate = createDate(stringDate);
+  const fixQuizCount = await updateQuizNumber(req.body.idNumber);
+  console.log(fixQuizCount, typeof fixQuizCount);
+  const savePayload = {
+    relatedId: req.body.idNumber,
+    tryCount: fixQuizCount,
+    score: {
+      earned: req.body.earned,
+      possible: req.body.possible,
+      specifics: req.body.specifics,
+    },
+    dateTaken: prunedDate,
+  };
+  console.log(savePayload, "this is the payloafd");
+  const savedResponse = await new ScoredQuiz(savePayload);
+  savedResponse.save();
+
+  res.send(savedResponse);
+});
+
+//{ earned: 100, possible: 300, idNumber: '5f27dca01e0e9685f080a595' }
+quizRouter.post("/getUser", async (req, res) => {
+  if (
+    req.body.id.length > 1000 ||
+    req.body.index > 2000 ||
+    req.body.index < -2000
+  ) {
+    return res.status(400).send("Invalic data");
+  }
+  try {
+    const userAccount = await User.findOne({ email: req.body.email });
+    const searchId = userAccount._id;
+    const accountObject = await UserAccount.findOne({ userId: searchId });
+    const userQuizzesArray = accountObject.quizzes;
+    const chosenQuiz = userQuizzesArray[req.body.index];
+    const selectedQuiz = await Quiz.findOne({ _id: chosenQuiz.quizId });
+    return res.send(selectedQuiz);
+  } catch (error) {
+    console.log("This is the error from getUser in quizzes: ", error);
+  }
 });
 quizRouter.put("/deleteQuiz", async (req, res) => {
   try {
@@ -169,9 +216,25 @@ quizRouter.post("/saveQuiz", async (req, res) => {
     console.log(err, "Error from quiz.js route.");
   }
 });
+const updateQuizNumber = async (id) => {
+  try {
+    const selectedQuiz = await Quiz.findById(id);
+    const fixedNum = await Quiz.update(
+      { _id: id },
+      { $set: { creationNumber: selectedQuiz.creationNumber + 1 } }
+    );
+    return selectedQuiz.creationNumber + 1;
+  } catch (error) {
+    console.log(error, "This is the error from updateQuizNumber in quiz route");
+  }
+};
 
 const createQuiz = async (quiz, req) => {
-  quiz = { name: req.body.name, questions: req.body.questions };
+  quiz = {
+    name: req.body.name,
+    questions: req.body.questions,
+    creationNumber: 0,
+  };
 
   const newQuiz = new Quiz(quiz);
   await newQuiz.save();

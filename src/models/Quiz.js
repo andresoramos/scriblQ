@@ -2,14 +2,6 @@ const mongoose = require("mongoose");
 const Joi = require("@hapi/joi");
 const _ = require("lodash");
 
-// const nameSchema = new mongoose.Schema({
-//   name: {
-//     type: String,
-//     required: true,
-//     minlength: 1,
-//     maxlength: 200,
-//   },
-// });
 const userSchema = new mongoose.Schema({
   name: {
     type: String,
@@ -17,6 +9,10 @@ const userSchema = new mongoose.Schema({
   },
   questions: {
     type: Array,
+    required: true,
+  },
+  creationNumber: {
+    type: Number,
     required: true,
   },
 });
