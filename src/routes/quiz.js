@@ -14,6 +14,24 @@ quizRouter.get("/", async (req, res) => {
   } catch (err) {}
 });
 
+quizRouter.post("/quizStats", async (req, res) => {
+  if (req.body.id.length > 500) {
+    return res.send("Id length is too long.");
+  }
+  try {
+    let foundQuizzes = [];
+    const findTries = await ScoredQuiz.find();
+    for (var i = 0; i < findTries.length; i++) {
+      if (findTries[i].relatedId === req.body.id) {
+        foundQuizzes.push(findTries[i]);
+      }
+    }
+    res.send(foundQuizzes);
+  } catch (error) {
+    console.log(error, "This is the error from quizStats in quiz.js");
+  }
+});
+
 quizRouter.post("/ScoredQuiz", async (req, res) => {
   console.log(req.body, "check earned");
   const { error } = validateScoredObject(req.body);
