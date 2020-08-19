@@ -4,9 +4,15 @@ const { Quiz, validateUser } = require("../models/Quiz");
 const { UserAccount, validateAccount } = require("../models/UserAccount");
 const { User } = require("../models/Users");
 const { ScoredQuiz, validateScoredObject } = require("../models/ScoredQuiz");
-const { find, update } = require("lodash");
+
 const createDate = require("../Services/createDate");
 
+quizRouter.get("/", async (req, res) => {
+  try {
+    const quiz = await Quiz.find();
+    res.send(quiz);
+  } catch (err) {}
+});
 quizRouter.get("/", async (req, res) => {
   try {
     const quiz = await Quiz.find();
