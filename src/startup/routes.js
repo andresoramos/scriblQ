@@ -16,11 +16,12 @@ const imgTestRouter = require("../routes/test");
 
 function loadAllRoutes(app) {
   app.use(express.json());
-  app.use(
-    fileUpload({
-      limits: { fileSize: 50 * 1024 * 1024 },
-    })
-  );
+  app.use(express.static("../public"));
+  // app.use(
+  //   fileUpload({
+  //     limits: { fileSize: 50 * 1024 * 1024 },
+  //   })
+  // );
   app.use("/api/users", userRouter);
   app.use("/api/auth", authRouter);
   app.use("/api/tokens", tokensRouter);
