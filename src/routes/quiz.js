@@ -13,12 +13,12 @@ quizRouter.get("/", async (req, res) => {
     res.send(quiz);
   } catch (err) {}
 });
-quizRouter.get("/", async (req, res) => {
-  try {
-    const quiz = await Quiz.find();
-    res.send(quiz);
-  } catch (err) {}
-});
+// quizRouter.get("/", async (req, res) => {
+//   try {
+//     const quiz = await Quiz.find();
+//     res.send(quiz);
+//   } catch (err) {}
+// });
 
 quizRouter.post("/quizStats", async (req, res) => {
   if (req.body.id.length > 500) {
