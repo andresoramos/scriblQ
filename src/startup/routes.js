@@ -8,6 +8,7 @@ const trackIpRouter = require("../routes/trackIp");
 const lockedOutRouter = require("../routes/lockedOut");
 const quizRouter = require("../routes/quiz");
 const imgTestRouter = require("../routes/test");
+const marketRouter = require("../routes/market");
 
 //Everything between these lines is a test
 //and might need to be deleted
@@ -29,6 +30,7 @@ function loadAllRoutes(app) {
   app.use("/api/ipTracker", trackIpRouter);
   app.use("/api/lockedOut", lockedOutRouter);
   app.use("/api/quizzes", quizRouter);
+  app.use("/api/market", marketRouter);
   app.use("/api/imgTest", imgTestRouter);
 }
 
