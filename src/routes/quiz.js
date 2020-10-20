@@ -1,11 +1,14 @@
 const express = require("express");
+const mongoose = require('mongoose');
 const quizRouter = express.Router();
 const { Quiz, validateUser } = require("../models/Quiz");
 const { UserAccount, validateAccount } = require("../models/UserAccount");
 const { User } = require("../models/Users");
+const {Maker} = require("../models/Makers")
 const { ScoredQuiz, validateScoredObject } = require("../models/ScoredQuiz");
 
 const createDate = require("../Services/createDate");
+const { object } = require("@hapi/joi");
 
 quizRouter.get("/", async (req, res) => {
   try {
@@ -60,7 +63,6 @@ quizRouter.post("/ScoredQuiz", async (req, res) => {
     },
     dateTaken: prunedDate,
   };
-  console.log(savePayload, "this is the payloafd");
   const savedResponse = await new ScoredQuiz(savePayload);
   savedResponse.save();
 
@@ -160,75 +162,112 @@ quizRouter.put("/:id", async (req, res) => {
     );
   } catch (err) {}
 });
+const updateMakers = async (quizId, creatorId)=>{
+  const makers = await Maker.find();
+  const newMakers = {...makers[0]}._doc
+  newMakers.makers[quizId] = {maker: creatorId}
+  await Maker.update({_id: newMakers._id}, {$set: {makers: newMakers.makers}})
 
+}
 quizRouter.post("/", async (req, res) => {
+  // const seeUsers = await UserAccount.find();
+  // console.log(seeUsers[0])
+  // add in a function that adds in the 
+  // quiz number and creator number to the makers part of the database
   try {
     const { error } = validateUser(req.body);
     if (error) {
       console.log(error.details[0].message);
       return res.status(400).send(error.details[0].message);
     }
-    const findQuiz = await Quiz.find();
-    let quiz;
-    if (findQuiz.length !== 0) {
-      for (var i = 0; i < findQuiz.length; i++) {
-        if (findQuiz[i].name === req.body.name) {
-          quiz = findQuiz[i];
-          const updated = await Quiz.update(
-            { _id: quiz._id },
+    const user = await UserAccount.findOne({userId: mongoose.Types.ObjectId(req.body.creatorId)});
+    if(user === null){
+      const newQuiz = await createQuiz(req.body, req);
+      const quizObj = { quizId: newQuiz._id, dateCreated: new Date(Date.now()), likes: 0, dislikes: 0 };
+      const quizProfile = {
+        userId: mongoose.Types.ObjectId(req.body.creatorId),
+        quizzes: [],
+        lastId: newQuiz._id
+      };
+      const newProfile = await new UserAccount(quizProfile);
+      newProfile.save();
+
+      return res.send(newProfile);
+
+    }
+    const currentQuiz = user.lastId !== undefined ? await Quiz.findById(user.lastId): null
+    const finalQuizId = user.quizzes[user.quizzes.length -1].quizId;
+    console.log(finalQuizId, user.lastId, "final id in user quiz array and last id property" )
+    if (currentQuiz !== null) {
+    
+       const updated = await Quiz.update(
+            { _id: currentQuiz._id },
             { $set: { questions: req.body.questions } }
-          );
+       )
         }
-      }
-      if (quiz === undefined) {
-        const newQuiz = await createQuiz(quiz, req);
+      
+      if (currentQuiz === null) {
+        const newQuiz = await createQuiz(currentQuiz, req);
+        const lastId = newQuiz._id
+        const id = user._id
+        await UserAccount.update({_id: id},{$set: {lastId}})
         return res.send(newQuiz);
       }
-    } else {
-      const newQuiz = await createQuiz(quiz, req);
-      return res.send(newQuiz);
-    }
+    
   } catch (err) {
     console.log(err, "Error from quiz.js route.");
   }
 });
-
+// started with nothing, added in a quiz, then made it's id the last id in the user 
+// account object.  From there, we need to run add question again.  It sees 
+// that there is a last id, so it then just updates the quiz that bears the last id. 
+// from there, we go to save.
+/*From there, if there's a user account linke to the userid, it'll take the
+id given by the lastid property and make sure that in the existing quiz array, the lastid is not 
+already located.  If it is, it'll then end the function and return an error chode.
+If the quiz isn't a duplicate, it updates the makers tracking object, and
+then pushes into the quiz array the latest quiz
+*/ 
 quizRouter.post("/saveQuiz", async (req, res) => {
   try {
-    const { error } = validateAccount(req.body);
-    if (error) {
-      console.log(error.details[0].message);
-      return res.status(400).send(error.details[0].message);
-    }
+    // const { error } = validateAccount(req.body);
+    // if (error) {
+    //   console.log(error.details[0].message);
+    //   return res.status(400).send(error.details[0].message);
+    // }
+    
     const findUser = await User.findOne({ email: req.body.email });
     const userId = findUser._id;
-    const findQuiz = await Quiz.findOne({ name: req.body.name });
-    const quizId = findQuiz._id;
-    const checkForAccount = await UserAccount.findOne({ userId });
-    if (checkForAccount) {
-      const updatedQuiz = await Quiz.findOne({ _id: quizId });
+    // const findQuiz = await Quiz.findOne({ name: req.body.name });
+    // const quizId = findQuiz._id;
+    const checkForAccount = await UserAccount.findOne({ userId: mongoose.Types.ObjectId(userId) });
+    const findQuiz = checkForAccount.lastId;
+    const quiz = await Quiz.findOne({ _id: mongoose.Types.ObjectId(findQuiz) });
+    if (checkForAccount !== null) {
       const newArray = [...checkForAccount.quizzes];
       for (var i = 0; i < newArray.length; i++) {
-        if (JSON.stringify(newArray[i].quizId) === JSON.stringify(quizId)) {
+        if (JSON.stringify(newArray[i].quizId) === JSON.stringify(findQuiz)) {
+         console.log('were find the last in here because we never made a new one, dummy')
           return res.status(400).send("This quiz is already in our database");
         }
       }
-
       const newQuizObj = {
-        quizId: updatedQuiz._id,
+        quizId: findQuiz,
         dateCreated: new Date(Date.now()),
         likes: 0,
         dislikes: 0,
       };
-
+      //quizId = findQuiz
+      await updateMakers(findQuiz, userId)
       newArray.push(newQuizObj);
       const savedQuiz = await UserAccount.update(
         { _id: checkForAccount._id },
         { $set: { quizzes: newArray } }
       );
+      await UserAccount.update( { _id: checkForAccount._id },{ $unset: {"lastId": ""}})
       return res.send(savedQuiz);
     }
-    const quizObj = { quizId, dateCreated: new Date(Date.now()) };
+    const quizObj = { quizId: findQuiz, dateCreated: new Date(Date.now()), likes: 0, dislikes: 0 };
     const quizProfile = {
       userId: userId,
       quizzes: [quizObj],
@@ -254,10 +293,12 @@ const updateQuizNumber = async (id) => {
 };
 
 const createQuiz = async (quiz, req) => {
+
   quiz = {
     name: req.body.name,
     questions: req.body.questions,
     creationNumber: 0,
+    creatorId: req.body.creatorId
   };
 
   const newQuiz = new Quiz(quiz);

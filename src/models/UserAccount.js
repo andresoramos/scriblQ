@@ -11,6 +11,9 @@ const userSchema = new mongoose.Schema({
     type: Array,
     required: true,
   },
+  lastId: {
+    type: String
+  }
 });
 
 function validateAccount(quiz) {

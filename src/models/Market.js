@@ -1,13 +1,12 @@
 const mongoose = require("mongoose");
 
 const marketSchema = new mongoose.Schema({
-  _id: {
+  makerId: {
     type: String,
     required: true,
   },
   nsfw: {
     type: Boolean,
-    required: true,
   },
   description: {
     type: String,
@@ -20,15 +19,26 @@ const marketSchema = new mongoose.Schema({
   },
 
   expirationDate: {
-    type: String,
+    type: Object,
   },
   cost: {
     type: Number,
-    required: true,
   },
   subject: {
     type: String,
   },
+  uploadDate: {
+    type: Object,
+  },
+  downloadedBy: {
+    type: Object,
+  },
+  likes: {
+    type: Object,
+  },
+  creatorId: {
+    type: String
+  }
 });
 
 const Market = mongoose.model("market", marketSchema);

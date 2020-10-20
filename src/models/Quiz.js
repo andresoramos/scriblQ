@@ -15,12 +15,17 @@ const userSchema = new mongoose.Schema({
     type: Number,
     required: true,
   },
+  creatorId: {
+    type: String,
+    required: true
+  }
 });
 
 function validateUser(quiz) {
   const schema = Joi.object({
     name: Joi.string().required(),
     questions: Joi.array().required(),
+    creatorId: Joi.string().required()
   });
 
   return ({ error, value } = schema.validate(quiz));
