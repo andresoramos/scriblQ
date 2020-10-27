@@ -2,23 +2,26 @@ const mongoose = require("mongoose");
 const Joi = require("@hapi/joi");
 const _ = require("lodash");
 
-const scoredQuizSchema = new mongoose.Schema({
-  relatedId: {
-    type: String,
-    required: true,
+const scoredQuizSchema = new mongoose.Schema(
+  {
+    relatedId: {
+      type: String,
+      required: true,
+    },
+    tryCount: {
+      type: Number,
+      required: true,
+    },
+    score: {
+      type: Object,
+      required: true,
+    },
+    dateTaken: {
+      type: String,
+    },
   },
-  tryCount: {
-    type: Number,
-    required: true,
-  },
-  score: {
-    type: Object,
-    required: true,
-  },
-  dateTaken: {
-    type: String,
-  },
-});
+  { minimize: false }
+);
 
 function validateScoredObject(quiz) {
   const schema = Joi.object({

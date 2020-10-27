@@ -4,12 +4,15 @@ const jwt = require("jsonwebtoken");
 const config = require("config");
 const _ = require("lodash");
 
-const userSchema = new mongoose.Schema({
-  ips: {
-    type: Object,
-    required: true,
+const userSchema = new mongoose.Schema(
+  {
+    ips: {
+      type: Object,
+      required: true,
+    },
   },
-});
+  { minimize: false }
+);
 
 function validateUser(user) {
   const schema = Joi.object({

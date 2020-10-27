@@ -2,12 +2,15 @@ const mongoose = require("mongoose");
 const Joi = require("@hapi/joi");
 const _ = require("lodash");
 
-const userSchema = new mongoose.Schema({
-  ips: {
-    type: Object,
-    required: true,
+const userSchema = new mongoose.Schema(
+  {
+    ips: {
+      type: Object,
+      required: true,
+    },
   },
-});
+  { minimize: false }
+);
 
 function validateUser(ip) {
   const schema = Joi.object({

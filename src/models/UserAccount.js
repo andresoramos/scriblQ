@@ -2,19 +2,22 @@ const mongoose = require("mongoose");
 const Joi = require("@hapi/joi");
 const _ = require("lodash");
 
-const userSchema = new mongoose.Schema({
-  userId: {
-    type: Object,
-    required: true,
+const userSchema = new mongoose.Schema(
+  {
+    userId: {
+      type: Object,
+      required: true,
+    },
+    quizzes: {
+      type: Array,
+      required: true,
+    },
+    lastId: {
+      type: String,
+    },
   },
-  quizzes: {
-    type: Array,
-    required: true,
-  },
-  lastId: {
-    type: String
-  }
-});
+  { minimize: false }
+);
 
 function validateAccount(quiz) {
   const schema = Joi.object({

@@ -1,14 +1,17 @@
 const mongoose = require("mongoose");
 const Joi = require("@hapi/joi");
 
-const userSchema = new mongoose.Schema({
-  token: {
-    type: String,
-    required: true,
-    minlength: 2,
-    maxlength: 5000,
+const userSchema = new mongoose.Schema(
+  {
+    token: {
+      type: String,
+      required: true,
+      minlength: 2,
+      maxlength: 5000,
+    },
   },
-});
+  { minimize: false }
+);
 
 function validateTokens(user) {
   const schema = Joi.object({
