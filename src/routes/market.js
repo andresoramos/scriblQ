@@ -89,14 +89,18 @@ marketRouter.post("/", async (req, res) => {
 
 //Start making a function that turns the input info object into the same format as what's saved in the db so that you can compare the two.
 const createComparisonObj = (market) => {
+  console.log(market, "This is market in comparison");
   const newMarket = {};
   for (var key in market) {
-    newMarket[key] = market[key] !== null ? market[key] : undefined;
+    newMarket[key] = market[key] !== null ? market[key] : null;
   }
-  newMarket.downloadPrice =
-    newMarket.downloadPrice !== undefined
-      ? Number(newMarket.downloadPrice)
-      : undefined;
+  // newMarket.downloadPrice =
+  //   newMarket.downloadPrice !== undefined
+  //     ? Number(newMarket.downloadPrice)
+  //     : undefined;
+  if (newMarket.downloadPrice !== undefined) {
+    newMarket.downloadPrice = Number(newMarket.downloadPrice);
+  }
   newMarket.cost =
     newMarket.cost !== undefined ? Number(newMarket.cost) : undefined;
   if (newMarket.premiumQuestions !== undefined) {
@@ -106,8 +110,6 @@ const createComparisonObj = (market) => {
     }
     newMarket.premiumQuestions = fixedPremQuestions;
   }
-  newMarket.uploadDate = new Date(Date.now());
-  newMarket.downloadedBy = {};
   newMarket.likes = { total: 0, likes: 0, dislikes: 0 };
   return newMarket;
 };
@@ -136,14 +138,15 @@ marketRouter.post("/findMarketObj", async (req, res) => {
   return res.send(marketObj);
 });
 marketRouter.post("/updateMarket", async (req, res) => {
-  const { payload } = req.body;
-  const present = await Market.findOne({
-    makerId: payload.makerId,
-  });
+  const { newPayload } = req.body;
+  const payload = Object.assign({}, newPayload);
+  console.log(payload);
+  const present = await Market.findById(payload.quizId);
+
   const comparisonObj = createComparisonObj(payload);
 
-  console.log(present, "This is the present object");
-  console.log(comparisonObj, "This is the present object");
+  console.log(comparisonObj, "This is the final comp obj");
+  // console.log(comparisonObj, "This is the present object");
   // for(var key in payload){
   //   await Market.update({_id: payload})
   // }
