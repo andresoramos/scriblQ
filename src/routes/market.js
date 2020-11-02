@@ -1,6 +1,7 @@
 const express = require("express");
 const mongoose = require("mongoose");
 const marketRouter = express.Router();
+const _ = require("lodash");
 const { Market } = require("../models/Market");
 const { Maker } = require("../models/Makers");
 const { Quiz } = require("../models/Quiz");
@@ -89,7 +90,7 @@ marketRouter.post("/", async (req, res) => {
 
 //Start making a function that turns the input info object into the same format as what's saved in the db so that you can compare the two.
 const createComparisonObj = (market) => {
-  console.log(market, "This is market in comparison");
+  // console.log(market, "This is market in comparison");
   const newMarket = {};
   for (var key in market) {
     newMarket[key] = market[key] !== null ? market[key] : null;
@@ -101,8 +102,11 @@ const createComparisonObj = (market) => {
   if (newMarket.downloadPrice !== undefined) {
     newMarket.downloadPrice = Number(newMarket.downloadPrice);
   }
-  newMarket.cost =
-    newMarket.cost !== undefined ? Number(newMarket.cost) : undefined;
+  if (typeof newMarket.cost === "string") {
+    newMarket.cost = Number(newMarket.cost);
+  }
+  // newMarket.cost =
+  //   newMarket.cost !== undefined ? Number(newMarket.cost) : undefined;
   if (newMarket.premiumQuestions !== undefined) {
     let fixedPremQuestions = { ...newMarket.premiumQuestions };
     for (var key in fixedPremQuestions) {
@@ -110,7 +114,6 @@ const createComparisonObj = (market) => {
     }
     newMarket.premiumQuestions = fixedPremQuestions;
   }
-  newMarket.likes = { total: 0, likes: 0, dislikes: 0 };
   return newMarket;
 };
 
@@ -140,16 +143,67 @@ marketRouter.post("/findMarketObj", async (req, res) => {
 marketRouter.post("/updateMarket", async (req, res) => {
   const { newPayload } = req.body;
   const payload = Object.assign({}, newPayload);
-  console.log(payload);
   const present = await Market.findById(payload.quizId);
+  const newPresent = _.cloneDeep(present._doc);
+  // const newPresent = { ...present };
 
   const comparisonObj = createComparisonObj(payload);
 
-  console.log(comparisonObj, "This is the final comp obj");
-  // console.log(comparisonObj, "This is the present object");
-  // for(var key in payload){
-  //   await Market.update({_id: payload})
-  // }
+  // console.log(comparisonObj, "This is the final comp obj");
+  console.log(comparisonObj, "This is the present object");
+
+  for (let key in comparisonObj) {
+    newPresent[key] = comparisonObj[key];
+  }
+  // console.log(newPresent, "newpresent after grooming");
+  for (let key in newPresent) {
+    console.log(key, "these are the keys");
+    if (present[key] === undefined && newPresent[key] === null) {
+      continue;
+    } else {
+      if (key === "_id" || key === "__v") {
+        continue;
+      }
+      if (
+        present[key] !== undefined &&
+        (newPresent[key] === null || newPresent[key] === undefined)
+      ) {
+        await Market.update({ _id: present._id }, { $unset: { [key]: "" } });
+        continue;
+      }
+
+      if (
+        present[key] !== undefined &&
+        newPresent[key] !== null &&
+        newPresent[key] !== undefined
+      ) {
+        await Market.update(
+          { _id: present._id },
+          {
+            $set: { [key]: newPresent[key] },
+          }
+        );
+        continue;
+      }
+      if (
+        present[key] === undefined &&
+        newPresent[key] !== undefined &&
+        newPresent[key] !== null
+      ) {
+        await Market.update(
+          { _id: present._id },
+          {
+            $set: { [key]: newPresent[key] },
+          }
+        );
+        continue;
+      }
+
+      // console.log(comparisonObj, "This is the present object");
+      // for(var key in payload){
+      //   await Market.update({_id: payload})
+    }
+  }
 });
 marketRouter.post("/findAllMarketObj", async (req, res) => {
   const { userId } = req.body;

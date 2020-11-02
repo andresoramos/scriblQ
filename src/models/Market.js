@@ -18,6 +18,9 @@ const marketSchema = new mongoose.Schema(
     hiddenQuestions: {
       type: Object,
     },
+    premiumQuestions: {
+      type: Object,
+    },
 
     expirationDate: {
       type: Object,
