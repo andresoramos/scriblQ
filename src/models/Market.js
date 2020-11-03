@@ -28,6 +28,9 @@ const marketSchema = new mongoose.Schema(
     cost: {
       type: Number,
     },
+    revenue: {
+      type: Object,
+    },
     subject: {
       type: String,
     },

@@ -83,6 +83,7 @@ marketRouter.post("/", async (req, res) => {
   newMarket.downloadedBy = {};
   newMarket.likes = { total: 0, likes: 0, dislikes: 0 };
   newMarket.creatorId = creatorId;
+  newMarket.revenue = { total: 0 };
   const saveQuiz = await new Market(newMarket);
   await saveQuiz.save();
   res.send(saveQuiz);
@@ -105,8 +106,14 @@ const createComparisonObj = (market) => {
   if (typeof newMarket.cost === "string") {
     newMarket.cost = Number(newMarket.cost);
   }
+  if (!newMarket.premium) {
+    if (newMarket.premiumQuestions !== undefined) {
+      delete newMarket.premiumQuestions;
+    }
+  }
   // newMarket.cost =
   //   newMarket.cost !== undefined ? Number(newMarket.cost) : undefined;
+  // You might need to add this to conditional below ----> || Object.keys(newMarket.premiumQuestions).length !== 0
   if (newMarket.premiumQuestions !== undefined) {
     let fixedPremQuestions = { ...newMarket.premiumQuestions };
     for (var key in fixedPremQuestions) {
@@ -150,15 +157,23 @@ marketRouter.post("/updateMarket", async (req, res) => {
   const comparisonObj = createComparisonObj(payload);
 
   // console.log(comparisonObj, "This is the final comp obj");
-  console.log(comparisonObj, "This is the present object");
 
   for (let key in comparisonObj) {
     newPresent[key] = comparisonObj[key];
   }
+  if (newPresent.premiumQuestions) {
+    console.log(
+      newPresent.premiumQuestions,
+      "HERE ARE THE PREMIUM QUESTIONS!!!"
+    );
+    if (Object.keys(newPresent.premiumQuestions).length === 0) {
+      delete newPresent.premiumQuestions;
+    }
+  }
   // console.log(newPresent, "newpresent after grooming");
   for (let key in newPresent) {
-    console.log(key, "these are the keys");
     if (present[key] === undefined && newPresent[key] === null) {
+      console.log("YOU'VE GOTTEN INTO THE FIRST CONDITIONAL");
       continue;
     } else {
       if (key === "_id" || key === "__v") {
@@ -168,6 +183,9 @@ marketRouter.post("/updateMarket", async (req, res) => {
         present[key] !== undefined &&
         (newPresent[key] === null || newPresent[key] === undefined)
       ) {
+        console.log(
+          "YOU SHOULD BE ENTERING THE NOT UNDEFINED BUT YES UNDEFINED IN NEW"
+        );
         await Market.update({ _id: present._id }, { $unset: { [key]: "" } });
         continue;
       }
@@ -204,6 +222,7 @@ marketRouter.post("/updateMarket", async (req, res) => {
       //   await Market.update({_id: payload})
     }
   }
+  res.send("Update complete");
 });
 marketRouter.post("/findAllMarketObj", async (req, res) => {
   const { userId } = req.body;
