@@ -1,10 +1,10 @@
 const express = require("express");
-const mongoose = require('mongoose');
+const mongoose = require("mongoose");
 const quizRouter = express.Router();
 const { Quiz, validateUser } = require("../models/Quiz");
 const { UserAccount, validateAccount } = require("../models/UserAccount");
 const { User } = require("../models/Users");
-const {Maker} = require("../models/Makers")
+const { Maker } = require("../models/Makers");
 const { ScoredQuiz, validateScoredObject } = require("../models/ScoredQuiz");
 
 const createDate = require("../Services/createDate");
@@ -138,6 +138,14 @@ quizRouter.post("/savedQuiz", async (req, res) => {
     res.send(sentBack);
   } catch (err) {}
 });
+quizRouter.post("/quizById", async (req, res) => {
+  try {
+    const quiz = await Quiz.findById(mongoose.Types.ObjectId(req.body.quizId));
+    res.send(quiz);
+  } catch (err) {
+    console.log(`This is the error from quizById in the quiz route: ${err}`);
+  }
+});
 
 quizRouter.put("/:id", async (req, res) => {
   try {
@@ -162,17 +170,19 @@ quizRouter.put("/:id", async (req, res) => {
     );
   } catch (err) {}
 });
-const updateMakers = async (quizId, creatorId)=>{
+const updateMakers = async (quizId, creatorId) => {
   const makers = await Maker.find();
-  const newMakers = {...makers[0]}._doc
-  newMakers.makers[quizId] = {maker: creatorId}
-  await Maker.update({_id: newMakers._id}, {$set: {makers: newMakers.makers}})
-
-}
+  const newMakers = { ...makers[0] }._doc;
+  newMakers.makers[quizId] = { maker: creatorId };
+  await Maker.update(
+    { _id: newMakers._id },
+    { $set: { makers: newMakers.makers } }
+  );
+};
 quizRouter.post("/", async (req, res) => {
   // const seeUsers = await UserAccount.find();
   // console.log(seeUsers[0])
-  // add in a function that adds in the 
+  // add in a function that adds in the
   // quiz number and creator number to the makers part of the database
   try {
     const { error } = validateUser(req.body);
@@ -180,54 +190,63 @@ quizRouter.post("/", async (req, res) => {
       console.log(error.details[0].message);
       return res.status(400).send(error.details[0].message);
     }
-    const user = await UserAccount.findOne({userId: mongoose.Types.ObjectId(req.body.creatorId)});
-    if(user === null){
+    const user = await UserAccount.findOne({
+      userId: mongoose.Types.ObjectId(req.body.creatorId),
+    });
+    if (user === null) {
       const newQuiz = await createQuiz(req.body, req);
-      const quizObj = { quizId: newQuiz._id, dateCreated: new Date(Date.now()), likes: 0, dislikes: 0 };
+      const quizObj = {
+        quizId: newQuiz._id,
+        dateCreated: new Date(Date.now()),
+        likes: 0,
+        dislikes: 0,
+      };
       const quizProfile = {
         userId: mongoose.Types.ObjectId(req.body.creatorId),
         quizzes: [],
-        lastId: newQuiz._id
+        lastId: newQuiz._id,
       };
       const newProfile = await new UserAccount(quizProfile);
       newProfile.save();
 
       return res.send(newProfile);
-
     }
-    const currentQuiz = user.lastId !== undefined ? await Quiz.findById(user.lastId): null
-    const finalQuizId = user.quizzes[user.quizzes.length -1].quizId;
-    console.log(finalQuizId, user.lastId, "final id in user quiz array and last id property" )
+    const currentQuiz =
+      user.lastId !== undefined ? await Quiz.findById(user.lastId) : null;
+    const finalQuizId = user.quizzes[user.quizzes.length - 1].quizId;
+    console.log(
+      finalQuizId,
+      user.lastId,
+      "final id in user quiz array and last id property"
+    );
     if (currentQuiz !== null) {
-    
-       const updated = await Quiz.update(
-            { _id: currentQuiz._id },
-            { $set: { questions: req.body.questions } }
-       )
-        }
-      
-      if (currentQuiz === null) {
-        const newQuiz = await createQuiz(currentQuiz, req);
-        const lastId = newQuiz._id
-        const id = user._id
-        await UserAccount.update({_id: id},{$set: {lastId}})
-        return res.send(newQuiz);
-      }
-    
+      const updated = await Quiz.update(
+        { _id: currentQuiz._id },
+        { $set: { questions: req.body.questions } }
+      );
+    }
+
+    if (currentQuiz === null) {
+      const newQuiz = await createQuiz(currentQuiz, req);
+      const lastId = newQuiz._id;
+      const id = user._id;
+      await UserAccount.update({ _id: id }, { $set: { lastId } });
+      return res.send(newQuiz);
+    }
   } catch (err) {
     console.log(err, "Error from quiz.js route.");
   }
 });
-// started with nothing, added in a quiz, then made it's id the last id in the user 
-// account object.  From there, we need to run add question again.  It sees 
-// that there is a last id, so it then just updates the quiz that bears the last id. 
+// started with nothing, added in a quiz, then made it's id the last id in the user
+// account object.  From there, we need to run add question again.  It sees
+// that there is a last id, so it then just updates the quiz that bears the last id.
 // from there, we go to save.
 /*From there, if there's a user account linke to the userid, it'll take the
 id given by the lastid property and make sure that in the existing quiz array, the lastid is not 
 already located.  If it is, it'll then end the function and return an error chode.
 If the quiz isn't a duplicate, it updates the makers tracking object, and
 then pushes into the quiz array the latest quiz
-*/ 
+*/
 quizRouter.post("/saveQuiz", async (req, res) => {
   try {
     // const { error } = validateAccount(req.body);
@@ -235,19 +254,23 @@ quizRouter.post("/saveQuiz", async (req, res) => {
     //   console.log(error.details[0].message);
     //   return res.status(400).send(error.details[0].message);
     // }
-    
+
     const findUser = await User.findOne({ email: req.body.email });
     const userId = findUser._id;
     // const findQuiz = await Quiz.findOne({ name: req.body.name });
     // const quizId = findQuiz._id;
-    const checkForAccount = await UserAccount.findOne({ userId: mongoose.Types.ObjectId(userId) });
+    const checkForAccount = await UserAccount.findOne({
+      userId: mongoose.Types.ObjectId(userId),
+    });
     const findQuiz = checkForAccount.lastId;
     const quiz = await Quiz.findOne({ _id: mongoose.Types.ObjectId(findQuiz) });
     if (checkForAccount !== null) {
       const newArray = [...checkForAccount.quizzes];
       for (var i = 0; i < newArray.length; i++) {
         if (JSON.stringify(newArray[i].quizId) === JSON.stringify(findQuiz)) {
-         console.log('were find the last in here because we never made a new one, dummy')
+          console.log(
+            "were find the last in here because we never made a new one, dummy"
+          );
           return res.status(400).send("This quiz is already in our database");
         }
       }
@@ -258,16 +281,24 @@ quizRouter.post("/saveQuiz", async (req, res) => {
         dislikes: 0,
       };
       //quizId = findQuiz
-      await updateMakers(findQuiz, userId)
+      await updateMakers(findQuiz, userId);
       newArray.push(newQuizObj);
       const savedQuiz = await UserAccount.update(
         { _id: checkForAccount._id },
         { $set: { quizzes: newArray } }
       );
-      await UserAccount.update( { _id: checkForAccount._id },{ $unset: {"lastId": ""}})
+      await UserAccount.update(
+        { _id: checkForAccount._id },
+        { $unset: { lastId: "" } }
+      );
       return res.send(savedQuiz);
     }
-    const quizObj = { quizId: findQuiz, dateCreated: new Date(Date.now()), likes: 0, dislikes: 0 };
+    const quizObj = {
+      quizId: findQuiz,
+      dateCreated: new Date(Date.now()),
+      likes: 0,
+      dislikes: 0,
+    };
     const quizProfile = {
       userId: userId,
       quizzes: [quizObj],
@@ -293,12 +324,11 @@ const updateQuizNumber = async (id) => {
 };
 
 const createQuiz = async (quiz, req) => {
-
   quiz = {
     name: req.body.name,
     questions: req.body.questions,
     creationNumber: 0,
-    creatorId: req.body.creatorId
+    creatorId: req.body.creatorId,
   };
 
   const newQuiz = new Quiz(quiz);
