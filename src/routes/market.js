@@ -49,6 +49,13 @@ const checkForDuplicate = async (makerId) => {
   const makers = await Market.findOne({ makerId });
   return makers !== null ? true : false;
 };
+marketRouter.get("/drop", async (req, res) => {
+  const markets = await Market.find();
+  for (var i = 0; i < markets.length; i++) {
+    await Market.findOneAndDelete({ _id: markets[i]._id });
+  }
+  res.send("completed");
+});
 
 marketRouter.post("/", async (req, res) => {
   const market = req.body;
@@ -161,19 +168,18 @@ marketRouter.post("/updateMarket", async (req, res) => {
   for (let key in comparisonObj) {
     newPresent[key] = comparisonObj[key];
   }
-  if (newPresent.premiumQuestions) {
-    console.log(
-      newPresent.premiumQuestions,
-      "HERE ARE THE PREMIUM QUESTIONS!!!"
-    );
-    if (Object.keys(newPresent.premiumQuestions).length === 0) {
-      delete newPresent.premiumQuestions;
+  for (let key in newPresent) {
+    if (comparisonObj[key] === undefined) {
+      delete newPresent[key];
     }
   }
+
   // console.log(newPresent, "newpresent after grooming");
+  //When you get back to this, your assingment is to figure out how
+  //to get rid of empty brackets when premium is deselected
+
   for (let key in newPresent) {
     if (present[key] === undefined && newPresent[key] === null) {
-      console.log("YOU'VE GOTTEN INTO THE FIRST CONDITIONAL");
       continue;
     } else {
       if (key === "_id" || key === "__v") {
@@ -183,9 +189,6 @@ marketRouter.post("/updateMarket", async (req, res) => {
         present[key] !== undefined &&
         (newPresent[key] === null || newPresent[key] === undefined)
       ) {
-        console.log(
-          "YOU SHOULD BE ENTERING THE NOT UNDEFINED BUT YES UNDEFINED IN NEW"
-        );
         await Market.update({ _id: present._id }, { $unset: { [key]: "" } });
         continue;
       }
@@ -216,11 +219,16 @@ marketRouter.post("/updateMarket", async (req, res) => {
         );
         continue;
       }
-
       // console.log(comparisonObj, "This is the present object");
       // for(var key in payload){
       //   await Market.update({_id: payload})
     }
+  }
+  if (present.premiumQuestions && newPresent.premiumQuestions === undefined) {
+    await Market.update(
+      { _id: present._id },
+      { $unset: { premiumQuestions: "" } }
+    );
   }
   res.send("Update complete");
 });
