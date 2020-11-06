@@ -101,6 +101,9 @@ const createComparisonObj = (market) => {
   // console.log(market, "This is market in comparison");
   const newMarket = {};
   for (var key in market) {
+    if (key === "makerId") {
+      console.log(`This is the makerId: ${market[key]}`);
+    }
     newMarket[key] = market[key] !== null ? market[key] : null;
   }
   // newMarket.downloadPrice =
@@ -132,6 +135,7 @@ const createComparisonObj = (market) => {
 };
 
 marketRouter.post("/findMarketObj", async (req, res) => {
+  console.log("We're hitting market obj");
   if (req.body.list) {
     const { id } = req.body;
     console.log(id);
@@ -158,11 +162,15 @@ marketRouter.post("/updateMarket", async (req, res) => {
   const { newPayload } = req.body;
   const payload = Object.assign({}, newPayload);
   const present = await Market.findById(payload.quizId);
+  console.log(
+    present,
+    `This is the quizId: ${payload.quizId}, preceded by the present object`
+  );
   const newPresent = _.cloneDeep(present._doc);
   // const newPresent = { ...present };
 
   const comparisonObj = createComparisonObj(payload);
-
+  console.log(comparisonObj.makerId, "Is the makerID in the comparison obj");
   // console.log(comparisonObj, "This is the final comp obj");
 
   for (let key in comparisonObj) {
@@ -251,6 +259,9 @@ marketRouter.post("/findMarketByName", async (req, res) => {
     return res.send(false);
   }
   const { _id } = foundQuiz;
+  console.log(
+    `You passed in a quiz id of: ${_id} and now you're going to check to see if a market has that as it's maker id.`
+  );
   const makerObj = await Market.findOne({ makerId: _id });
   res.send(makerObj === null ? false : makerObj);
 });
