@@ -172,6 +172,13 @@ quizRouter.put("/:id", async (req, res) => {
 });
 const updateMakers = async (quizId, creatorId) => {
   const makers = await Maker.find();
+  if (makers.length === 0) {
+    let finalObj = {};
+    finalObj[quizId] = { maker: creatorId };
+    const newMakers = await new Maker({ makers: finalObj });
+    await newMakers.save();
+    return;
+  }
   const newMakers = { ...makers[0] }._doc;
   newMakers.makers[quizId] = { maker: creatorId };
   await Maker.update(
@@ -180,10 +187,6 @@ const updateMakers = async (quizId, creatorId) => {
   );
 };
 quizRouter.post("/", async (req, res) => {
-  // const seeUsers = await UserAccount.find();
-  // console.log(seeUsers[0])
-  // add in a function that adds in the
-  // quiz number and creator number to the makers part of the database
   try {
     const { error } = validateUser(req.body);
     if (error) {
@@ -249,28 +252,26 @@ then pushes into the quiz array the latest quiz
 */
 quizRouter.post("/saveQuiz", async (req, res) => {
   try {
-    // const { error } = validateAccount(req.body);
-    // if (error) {
-    //   console.log(error.details[0].message);
-    //   return res.status(400).send(error.details[0].message);
-    // }
-
+    console.log("savequiz got to line: 251");
     const findUser = await User.findOne({ email: req.body.email });
     const userId = findUser._id;
-    // const findQuiz = await Quiz.findOne({ name: req.body.name });
-    // const quizId = findQuiz._id;
+    console.log("savequiz got to line: 254");
     const checkForAccount = await UserAccount.findOne({
       userId: mongoose.Types.ObjectId(userId),
     });
+    console.log(
+      "savequiz got to line: 258, and the userAccount Id is the following: ",
+      checkForAccount._id
+    );
     const findQuiz = checkForAccount.lastId;
+    console.log("savequiz got to line: 260");
     const quiz = await Quiz.findOne({ _id: mongoose.Types.ObjectId(findQuiz) });
+
     if (checkForAccount !== null) {
+      console.log("savequiz got to line: 264");
       const newArray = [...checkForAccount.quizzes];
       for (var i = 0; i < newArray.length; i++) {
         if (JSON.stringify(newArray[i].quizId) === JSON.stringify(findQuiz)) {
-          console.log(
-            "were find the last in here because we never made a new one, dummy"
-          );
           return res.status(400).send("This quiz is already in our database");
         }
       }
@@ -282,15 +283,22 @@ quizRouter.post("/saveQuiz", async (req, res) => {
       };
       //quizId = findQuiz
       await updateMakers(findQuiz, userId);
+      console.log("savequiz got to line: 279");
       newArray.push(newQuizObj);
+      console.log(
+        "THIS IS THE ACCOUNT NUMBER YOU'RE UPDATING",
+        checkForAccount._id
+      );
       const savedQuiz = await UserAccount.update(
         { _id: checkForAccount._id },
         { $set: { quizzes: newArray } }
       );
+      console.log("savequiz got to line: 285");
       await UserAccount.update(
         { _id: checkForAccount._id },
         { $unset: { lastId: "" } }
       );
+      console.log("savequiz got to line: 290");
       return res.send(savedQuiz);
     }
     const quizObj = {
@@ -303,8 +311,10 @@ quizRouter.post("/saveQuiz", async (req, res) => {
       userId: userId,
       quizzes: [quizObj],
     };
+    console.log("savequiz got to line: 303");
     const newProfile = await new UserAccount(quizProfile);
     newProfile.save();
+    console.log("savequiz got to line: 306");
     res.send(newProfile);
   } catch (err) {
     console.log(err, "Error from quiz.js route.");

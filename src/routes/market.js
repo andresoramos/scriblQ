@@ -263,6 +263,7 @@ marketRouter.post("/findMarketByName", async (req, res) => {
     `You passed in a quiz id of: ${_id} and now you're going to check to see if a market has that as it's maker id.`
   );
   const makerObj = await Market.findOne({ makerId: _id });
+  console.log(makerObj, "This is the makerObj");
   res.send(makerObj === null ? false : makerObj);
 });
 
