@@ -250,6 +250,18 @@ already located.  If it is, it'll then end the function and return an error chod
 If the quiz isn't a duplicate, it updates the makers tracking object, and
 then pushes into the quiz array the latest quiz
 */
+quizRouter.put("/updateMakers/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const makerArray = await Maker.find();
+    const maker = makerArray[0].makers;
+    delete maker[id];
+    await Maker.update({ _id: makerArray[0]._id }, { $set: { makers: maker } });
+    return res.send(true);
+  } catch (error) {
+    console.log(`You had an error at quiz.js/updateMakers: ${error}`);
+  }
+});
 quizRouter.post("/saveQuiz", async (req, res) => {
   try {
     console.log("savequiz got to line: 251");
