@@ -197,7 +197,7 @@ quizRouter.post("/", async (req, res) => {
       userId: mongoose.Types.ObjectId(req.body.creatorId),
     });
     if (user === null) {
-      const newQuiz = await createQuiz(req.body, req);
+      const newQuiz = await createQuiz(req);
       const quizObj = {
         quizId: newQuiz._id,
         dateCreated: new Date(Date.now()),
@@ -216,12 +216,8 @@ quizRouter.post("/", async (req, res) => {
     }
     const currentQuiz =
       user.lastId !== undefined ? await Quiz.findById(user.lastId) : null;
-    const finalQuizId = user.quizzes[user.quizzes.length - 1].quizId;
-    console.log(
-      finalQuizId,
-      user.lastId,
-      "final id in user quiz array and last id property"
-    );
+    console.log(currentQuiz, "this is the current quiz");
+    //Keep working from here to see if you can solve the issues with creating quizzes here
     if (currentQuiz !== null) {
       const updated = await Quiz.update(
         { _id: currentQuiz._id },
@@ -263,6 +259,11 @@ quizRouter.put("/updateMakers/:id", async (req, res) => {
   }
 });
 quizRouter.post("/saveQuiz", async (req, res) => {
+  console.log(
+    req.body,
+    "This is what it looks like when things enter the back end"
+  );
+
   try {
     console.log("savequiz got to line: 251");
     const findUser = await User.findOne({ email: req.body.email });
@@ -271,16 +272,10 @@ quizRouter.post("/saveQuiz", async (req, res) => {
     const checkForAccount = await UserAccount.findOne({
       userId: mongoose.Types.ObjectId(userId),
     });
-    console.log(
-      "savequiz got to line: 258, and the userAccount Id is the following: ",
-      checkForAccount._id
-    );
     const findQuiz = checkForAccount.lastId;
-    console.log("savequiz got to line: 260");
     const quiz = await Quiz.findOne({ _id: mongoose.Types.ObjectId(findQuiz) });
 
     if (checkForAccount !== null) {
-      console.log("savequiz got to line: 264");
       const newArray = [...checkForAccount.quizzes];
       for (var i = 0; i < newArray.length; i++) {
         if (JSON.stringify(newArray[i].quizId) === JSON.stringify(findQuiz)) {
@@ -295,22 +290,16 @@ quizRouter.post("/saveQuiz", async (req, res) => {
       };
       //quizId = findQuiz
       await updateMakers(findQuiz, userId);
-      console.log("savequiz got to line: 279");
       newArray.push(newQuizObj);
-      console.log(
-        "THIS IS THE ACCOUNT NUMBER YOU'RE UPDATING",
-        checkForAccount._id
-      );
+
       const savedQuiz = await UserAccount.update(
         { _id: checkForAccount._id },
         { $set: { quizzes: newArray } }
       );
-      console.log("savequiz got to line: 285");
       await UserAccount.update(
         { _id: checkForAccount._id },
         { $unset: { lastId: "" } }
       );
-      console.log("savequiz got to line: 290");
       return res.send(savedQuiz);
     }
     const quizObj = {
@@ -345,8 +334,8 @@ const updateQuizNumber = async (id) => {
   }
 };
 
-const createQuiz = async (quiz, req) => {
-  quiz = {
+const createQuiz = async (req) => {
+  const quiz = {
     name: req.body.name,
     questions: req.body.questions,
     creationNumber: 0,
