@@ -6,7 +6,7 @@ const { UserAccount, validateAccount } = require("../models/UserAccount");
 const { User } = require("../models/Users");
 const { Maker } = require("../models/Makers");
 const { ScoredQuiz, validateScoredObject } = require("../models/ScoredQuiz");
-
+const { Tester } = require("../models/TestModel");
 const createDate = require("../Services/createDate");
 const { object } = require("@hapi/joi");
 
@@ -186,7 +186,20 @@ const updateMakers = async (quizId, creatorId) => {
     { $set: { makers: newMakers.makers } }
   );
 };
+// quizRouter.post("/test", async (req, res) => {
+//   const { num } = req.body;
+//   const newTest = await new Tester({ num });
+//   await newTest.save();
+//   if (num % 2 === 0) {
+//     res.send("this works");
+//   }
+// });
 quizRouter.post("/", async (req, res) => {
+  console.log(
+    req.body.name,
+    "This is my body, daddy, and its length is ",
+    req.body.questions.length
+  );
   try {
     const { error } = validateUser(req.body);
     if (error) {
@@ -197,6 +210,7 @@ quizRouter.post("/", async (req, res) => {
       userId: mongoose.Types.ObjectId(req.body.creatorId),
     });
     if (user === null) {
+      console.log("user null entered");
       const newQuiz = await createQuiz(req);
       const quizObj = {
         quizId: newQuiz._id,
@@ -212,21 +226,24 @@ quizRouter.post("/", async (req, res) => {
       const newProfile = await new UserAccount(quizProfile);
       newProfile.save();
 
+      console.log("user null will be exited");
       return res.send(newProfile);
     }
+    console.log("entered the second part");
     const currentQuiz =
       user.lastId !== undefined ? await Quiz.findById(user.lastId) : null;
-    console.log(currentQuiz, "this is the current quiz");
     //Keep working from here to see if you can solve the issues with creating quizzes here
     if (currentQuiz !== null) {
       const updated = await Quiz.update(
         { _id: currentQuiz._id },
         { $set: { questions: req.body.questions } }
       );
+      res.send(true);
     }
 
     if (currentQuiz === null) {
-      const newQuiz = await createQuiz(currentQuiz, req);
+      console.log("YOU'VE HIT THE CURRENTQUIZ BEING NULL");
+      const newQuiz = await createQuiz(req);
       const lastId = newQuiz._id;
       const id = user._id;
       await UserAccount.update({ _id: id }, { $set: { lastId } });
