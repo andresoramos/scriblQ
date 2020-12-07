@@ -259,26 +259,34 @@ marketRouter.post("/findMarketByName", async (req, res) => {
     return res.send(false);
   }
   const { _id } = foundQuiz;
-  console.log(
-    `You passed in a quiz id of: ${_id} and now you're going to check to see if a market has that as it's maker id.`
-  );
+
   const makerObj = await Market.findOne({ makerId: _id });
-  console.log(makerObj, "This is the makerObj");
   res.send(makerObj === null ? false : makerObj);
 });
 
 marketRouter.get("/", async (req, res) => {
-  const makers = await UserAccount.find();
-  let finalObj = {};
-  for (var i = 0; i < makers.length; i++) {
-    for (var j = 0; j < makers[i].quizzes.length; j++) {
-      finalObj[makers[i].quizzes[j].quizId] = { maker: makers[i].userId };
-    }
+  try {
+    const quizzes = await Quiz.find();
+    const markets = await Market.find();
+    const makers = await Maker.find();
+    const finalObj = { quizzes, markets, makers };
+    return res.send(finalObj);
+  } catch (error) {
+    console.log(`You have an error at get market.js/: `, error);
   }
-  const newMakers = await new Maker({ makers: finalObj });
-  await newMakers.save();
-  res.send(newMakers);
 });
+// marketRouter.get("/", async (req, res) => {
+//   const makers = await UserAccount.find();
+//   let finalObj = {};
+//   for (var i = 0; i < makers.length; i++) {
+//     for (var j = 0; j < makers[i].quizzes.length; j++) {
+//       finalObj[makers[i].quizzes[j].quizId] = { maker: makers[i].userId };
+//     }
+//   }
+//   const newMakers = await new Maker({ makers: finalObj });
+//   await newMakers.save();
+//   res.send(newMakers);
+// });
 
 module.exports = marketRouter;
 

@@ -14,14 +14,11 @@ quizRouter.get("/", async (req, res) => {
   try {
     const quiz = await Quiz.find();
     res.send(quiz);
-  } catch (err) {}
+  } catch (err) {
+    console.log(`You had an error at get quiz.js/: ${err}`);
+  }
 });
-// quizRouter.get("/", async (req, res) => {
-//   try {
-//     const quiz = await Quiz.find();
-//     res.send(quiz);
-//   } catch (err) {}
-// });
+//
 
 quizRouter.post("/quizStats", async (req, res) => {
   if (req.body.id.length > 500) {
@@ -195,11 +192,6 @@ const updateMakers = async (quizId, creatorId) => {
 //   }
 // });
 quizRouter.post("/", async (req, res) => {
-  console.log(
-    req.body.name,
-    "This is my body, daddy, and its length is ",
-    req.body.questions.length
-  );
   try {
     const { error } = validateUser(req.body);
     if (error) {
@@ -212,12 +204,6 @@ quizRouter.post("/", async (req, res) => {
     if (user === null) {
       console.log("user null entered");
       const newQuiz = await createQuiz(req);
-      const quizObj = {
-        quizId: newQuiz._id,
-        dateCreated: new Date(Date.now()),
-        likes: 0,
-        dislikes: 0,
-      };
       const quizProfile = {
         userId: mongoose.Types.ObjectId(req.body.creatorId),
         quizzes: [],
@@ -236,7 +222,7 @@ quizRouter.post("/", async (req, res) => {
     if (currentQuiz !== null) {
       const updated = await Quiz.update(
         { _id: currentQuiz._id },
-        { $set: { questions: req.body.questions } }
+        { $set: { questions: req.body.questions, history: req.body.history } }
       );
       res.send(true);
     }
@@ -352,11 +338,13 @@ const updateQuizNumber = async (id) => {
 };
 
 const createQuiz = async (req) => {
+  console.log(req.body.history, "This is history");
   const quiz = {
     name: req.body.name,
     questions: req.body.questions,
     creationNumber: 0,
     creatorId: req.body.creatorId,
+    history: req.body.history,
   };
 
   const newQuiz = new Quiz(quiz);

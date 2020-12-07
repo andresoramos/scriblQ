@@ -26,6 +26,9 @@ const userSchema = new mongoose.Schema(
     dislikes: {
       type: Number,
     },
+    history: {
+      type: Object,
+    },
   },
   { minimize: false }
 );
@@ -35,6 +38,7 @@ function validateUser(quiz) {
     name: Joi.string().required(),
     questions: Joi.array().required(),
     creatorId: Joi.string().required(),
+    history: Joi.object().required(),
   });
 
   return ({ error, value } = schema.validate(quiz));
