@@ -4,11 +4,10 @@ const quizRouter = express.Router();
 const { Quiz, validateUser } = require("../models/Quiz");
 const { UserAccount, validateAccount } = require("../models/UserAccount");
 const { User } = require("../models/Users");
+const { Market } = require("../models/Market");
 const { Maker } = require("../models/Makers");
 const { ScoredQuiz, validateScoredObject } = require("../models/ScoredQuiz");
-const { Tester } = require("../models/TestModel");
 const createDate = require("../Services/createDate");
-const { object } = require("@hapi/joi");
 
 quizRouter.get("/", async (req, res) => {
   try {
@@ -18,7 +17,34 @@ quizRouter.get("/", async (req, res) => {
     console.log(`You had an error at get quiz.js/: ${err}`);
   }
 });
-//
+quizRouter.post("/download", async (req, res) => {
+  //Find Quiz and User
+  //Look through the history in the market obj
+  //check to see if the quiz charges.  If so, inform user that they need to pay
+  //and create dialogue box that allows exchange of funds
+
+  //Check to see if there are premium questions - if there are, give them the
+  //option to either not get the premiums, to buy them all, or to select which ones they want
+  //If there are hidden questions, make sure to remove them before the user has access to them
+  try {
+    const { _id } = req.body.quiz;
+    const { user } = req.body;
+    const marketObj = await Market.findOne({ makerId: _id });
+    //if charge and if number in history
+    if (marketObj.history.charge && marketObj.history.number) {
+      return res.send({ charge: true, cost: marketObj.history.number });
+    }
+    if (marketObj.downloadedBy[user._id] === undefined) {
+      await Market.update(
+        { _id: marketObj._id },
+        { $set: { downloadedBy: { [user._id]: Date.now() } } }
+      );
+    }
+    res.send(true);
+  } catch (err) {
+    console.log(`You had an error at get quiz.js/download: ${err}`);
+  }
+});
 
 quizRouter.post("/quizStats", async (req, res) => {
   if (req.body.id.length > 500) {

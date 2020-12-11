@@ -14,6 +14,19 @@ userRouter.get("/", async (req, res) => {
   }
 });
 
+userRouter.post("/balance", async (req, res) => {
+  try {
+    const { userId } = req.body;
+    const user = User.findById(userId);
+    const balance = user.balance;
+    if (!balance) {
+      return res.send(false);
+    }
+    res.send({ balance });
+  } catch (error) {
+    console.log(`You've hit an error at userRouter.js/balance: ${error}`);
+  }
+});
 userRouter.post("/exists", async (req, res) => {
   if (typeof req.body.token !== "string" || req.body.token.length > 20000) {
     return res.status(400).send("Invalid user.");
