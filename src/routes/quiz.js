@@ -30,16 +30,19 @@ quizRouter.post("/download", async (req, res) => {
     const { _id } = req.body.quiz;
     const { user } = req.body;
     const marketObj = await Market.findOne({ makerId: _id });
-    //if charge and if number in history
     if (marketObj.history.charge && marketObj.history.number) {
       return res.send({ charge: true, cost: marketObj.history.number });
     }
+    //create a situation that sends back an object with premium questions if there are any
+
     if (marketObj.downloadedBy[user._id] === undefined) {
       await Market.update(
         { _id: marketObj._id },
         { $set: { downloadedBy: { [user._id]: Date.now() } } }
       );
     }
+    //create a situation that tells front end to prune off hidden questions if there
+    //are any by sending out an object with them
     res.send(true);
   } catch (err) {
     console.log(`You had an error at get quiz.js/download: ${err}`);

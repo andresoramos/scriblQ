@@ -1,9 +1,11 @@
 const express = require("express");
 const { User, validateUser } = require("../models/Users");
+const { Market } = require("../models/Market");
 const userRouter = express.Router();
 const bcrypt = require("bcrypt");
 const _ = require("lodash");
 const decode = require("jwt-decode");
+const { update } = require("lodash");
 
 userRouter.get("/", async (req, res) => {
   var ip = req.ip;
@@ -17,7 +19,7 @@ userRouter.get("/", async (req, res) => {
 userRouter.post("/balance", async (req, res) => {
   try {
     const { userId } = req.body;
-    const user = User.findById(userId);
+    const user = await User.findById(userId);
     const balance = user.balance;
     if (!balance) {
       return res.send(false);
@@ -27,6 +29,74 @@ userRouter.post("/balance", async (req, res) => {
     console.log(`You've hit an error at userRouter.js/balance: ${error}`);
   }
 });
+
+userRouter.post("/addFunds", async (req, res) => {
+  try {
+    const { amount, userId } = req.body;
+    const user = User.findById(userId);
+    const balance = user.balance;
+    if (!balance) {
+      await User.update({ _id: userId }, { $set: { balance: amount } });
+      return res.send({ balance: amount });
+    }
+    const newAmount = balance + amount;
+    await User.update({ _id: userId }, { $set: { balance: newAmount } });
+    return res.send({ balance: newAmount });
+  } catch (err) {
+    console.log(`You've hit an error at userRouter.js/addFunds: ${err}`);
+  }
+});
+userRouter.post("/tradeFunds", async (req, res) => {
+  try {
+    const { amount, userId, creatorId, quizId } = req.body;
+    const buyer = await User.findById(userId);
+    const { balance } = buyer;
+    const newBalance = balance - amount;
+    await User.update({ _id: buyer._id }, { $set: { balance: newBalance } });
+    const seller = await User.findById(creatorId);
+    if (JSON.stringify(seller._id) === JSON.stringify(buyer._id)) {
+      return res.status(404).send("You cannot buy your own quiz.");
+    }
+    const quizObj = await Market.findOne({ makerId: quizId });
+    if (quizObj.downloadedBy[buyer._id] === undefined) {
+      await Market.update(
+        { _id: quizObj._id },
+        { $set: { downloadedBy: { [buyer._id]: Date.now() } } }
+      );
+    } else {
+      res.status(404).send("You already own this quiz.");
+    }
+    const sellerBalance = seller.balance;
+    if (!sellerBalance) {
+      await User.update({ _id: seller._id }, { $set: { balance: amount } });
+    } else {
+      const newBalance = sellerBalance + amount;
+      await User.update({ _id: seller._id }, { $set: { balance: newBalance } });
+    }
+    const revenueObj = { total: quizObj.revenue.total + amount };
+    revenueObj.totalDownloads = !quizObj.revenue.totalDownloads
+      ? 1
+      : 1 + quizObj.revenue.totalDownloads;
+
+    await Market.update(
+      { _id: quizObj._id },
+      {
+        $set: {
+          revenue: revenueObj,
+          downloadCount: !quizObj.downloadCount ? 1 : quizObj.downloadCount + 1,
+          totalEarnings: !quizObj.totalEarnings
+            ? amount
+            : quizObj.totalEarnings + amount,
+        },
+      }
+    );
+
+    res.send(true);
+  } catch (err) {
+    console.log(`You've hit an error at userRouter.js/tradeFunds: ${err}`);
+  }
+});
+
 userRouter.post("/exists", async (req, res) => {
   if (typeof req.body.token !== "string" || req.body.token.length > 20000) {
     return res.status(400).send("Invalid user.");
