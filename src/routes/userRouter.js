@@ -1,12 +1,12 @@
 const express = require("express");
 const { User, validateUser } = require("../models/Users");
 const { Market } = require("../models/Market");
+const { buyService } = require("../Services/buyService");
+
 const userRouter = express.Router();
 const bcrypt = require("bcrypt");
 const _ = require("lodash");
 const decode = require("jwt-decode");
-const { update } = require("lodash");
-
 userRouter.get("/", async (req, res) => {
   var ip = req.ip;
   console.log(ip, "this is the ip");
@@ -90,6 +90,7 @@ userRouter.post("/tradeFunds", async (req, res) => {
         },
       }
     );
+    await buyService(quizId, userId);
 
     res.send(true);
   } catch (err) {
