@@ -120,6 +120,17 @@ userRouter.post("/exists", async (req, res) => {
   }
 });
 
+userRouter.put("/addCreator/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const user = await User.findById(id);
+    console.log(user, "might be null");
+    res.send({ user });
+  } catch (error) {
+    return res.send(false);
+  }
+});
+
 userRouter.post("/", async (req, res) => {
   const valid = validateUser(req.body);
   if (valid.error) {

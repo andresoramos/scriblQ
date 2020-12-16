@@ -17,6 +17,22 @@ quizRouter.get("/", async (req, res) => {
     console.log(`You had an error at get quiz.js/: ${err}`);
   }
 });
+quizRouter.post("/paidQuizzes", async (req, res) => {
+  try {
+    const { userId } = req.body;
+    const user = await User.findById(userId);
+    let quizzes = [];
+    const { quizzesOwned } = user;
+    if (quizzesOwned) {
+      for (var key in quizzesOwned) {
+        quizzes.push(quizzesOwned[key]);
+      }
+    }
+    return res.send(quizzes);
+  } catch (err) {
+    console.log(`You had an error at get quiz.js/paidQuizzes: ${err}`);
+  }
+});
 quizRouter.post("/download", async (req, res) => {
   //Find Quiz and User
   //Look through the history in the market obj
