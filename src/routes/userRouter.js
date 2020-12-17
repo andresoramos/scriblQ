@@ -124,8 +124,8 @@ userRouter.put("/addCreator/:id", async (req, res) => {
   try {
     const { id } = req.params;
     const user = await User.findById(id);
-    console.log(user, "might be null");
-    res.send({ user });
+    const market = await Market.findOne({ creatorId: id });
+    res.send({ user, description: market.description });
   } catch (error) {
     return res.send(false);
   }

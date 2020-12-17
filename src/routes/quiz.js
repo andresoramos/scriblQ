@@ -17,6 +17,74 @@ quizRouter.get("/", async (req, res) => {
     console.log(`You had an error at get quiz.js/: ${err}`);
   }
 });
+
+quizRouter.put("/addLiked/:quizId/:userId", async (req, res) => {
+  try {
+    //check to see if a likedBy Object is there
+    //if not, initialize it
+    //LB obj will have userId as a property
+    //and true as the value
+
+    //if the likedBy property exists,
+    //then check to see if the user Id
+    //is there
+
+    //if not, return
+    const { quizId, userId } = req.params;
+    const quiz = await Quiz.findById(quizId);
+    if (!quiz.likedBy) {
+      const likedBy = { [userId]: true };
+      await Quiz.update({ _id: quizId }, { $set: { likedBy } });
+    } else {
+      if (quiz.likedBy[userId]) {
+        return res.send({ alreadyLiked: true });
+      }
+      const likedBy = { ...quiz.likedBy, [userId]: true };
+      await Quiz.update({ _id: quizId }, { $set: { likedBy } });
+    }
+    const user = User.findById(userId);
+    if (!user.likedQuizzes) {
+      const likedQuizzes = { [quizId]: true };
+      await User.update(
+        { _id: userId },
+        {
+          $set: {
+            likedQuizzes,
+          },
+        }
+      );
+    }
+
+    if (!quiz.likes) {
+      await Quiz.update(
+        { _id: quiz._id },
+        {
+          $set: {
+            likes: 1,
+          },
+        }
+      );
+    } else {
+      await Quiz.update(
+        { _id: quizId },
+        {
+          $set: {
+            likes: quiz.likes + 1,
+          },
+        }
+      );
+    }
+    const market = await Market.findOne({ makerId: quizId });
+    const newLikes = { ...market.likes };
+    newLikes.likes = newLikes.likes + 1;
+    newLikes.total = newLikes.likes + newLikes.dislikes;
+    await Market.update({ _id: market._id }, { $set: { likes: newLikes } });
+    return res.send(true);
+  } catch (err) {
+    console.log(`You had an error at get quiz.js/addLiked: ${err}`);
+    return res.send(false);
+  }
+});
 quizRouter.post("/paidQuizzes", async (req, res) => {
   try {
     const { userId } = req.body;

@@ -27,6 +27,7 @@ const userSchema = new mongoose.Schema(
     },
     balance: { type: Number },
     quizzesOwned: { type: Object },
+    likedQuizzes: { type: Object },
     isAdmin: Boolean,
   },
   { minimize: false }
