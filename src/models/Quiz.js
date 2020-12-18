@@ -30,6 +30,7 @@ const userSchema = new mongoose.Schema(
       type: Object,
     },
     likedBy: { type: Object },
+    dislikedBy: { type: Object },
   },
   { minimize: false }
 );

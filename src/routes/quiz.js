@@ -9,6 +9,20 @@ const { Maker } = require("../models/Makers");
 const { ScoredQuiz, validateScoredObject } = require("../models/ScoredQuiz");
 const createDate = require("../Services/createDate");
 
+const checkForLiked = (quiz, user) => {
+  let quizThere = true;
+  let userThere = true;
+  if (!quiz.likedBy[user._id]) {
+    userThere = false;
+  }
+  if (!user.likedQuizzes[quiz._id]) {
+    quizThere = false;
+  }
+  if (!quizThere || !userThere) {
+    return false;
+  }
+  return true;
+};
 quizRouter.get("/", async (req, res) => {
   try {
     const quiz = await Quiz.find();
@@ -17,39 +31,116 @@ quizRouter.get("/", async (req, res) => {
     console.log(`You had an error at get quiz.js/: ${err}`);
   }
 });
+quizRouter.put("/unlike/:quizId/:userId", async (req, res) => {
+  try {
+    const { quizId, userId } = req.params;
+    const quiz = await Quiz.findById(quizId);
+    const user = await User.findById(userId);
+    const market = await Market.findOne({ makerId: quizId });
+    const confirmLiked = checkForLiked(quiz, user);
+    if (!confirmLiked) {
+      return res.send({ notLiked: true });
+    }
+    let likedQuizzes = { ...user.likedQuizzes };
+    delete likedQuizzes[quizId];
+    await User.update({ _id: userId }, { $set: { likedQuizzes } });
+    const likes = quiz.likes - 1;
+    let likedBy = { ...quiz.likedBy };
+    delete likedBy[userId];
+    await Quiz.update({ _id: quizId }, { $set: { likes, likedBy } });
+    let marketLikes = { ...market.likes };
+    marketLikes.total = market.likes.total - 1;
+    marketLikes.likes = market.likes.likes - 1;
+    await Market.update({ _id: market._id }, { $set: { likes: marketLikes } });
+    if (user.quizzesOwned && user.quizzesOwned[quizId]) {
+      const newQuiz = await Quiz.findById(quizId);
+      console.log(newQuiz.likedBy, "this should be empty", user._id);
+      await User.update(
+        { _id: userId },
+        { $set: { quizzesOwned: { ...user.quizzesOwned, [quizId]: newQuiz } } }
+      );
+    }
+    res.send(true);
+  } catch (err) {
+    console.log(`You had an error at get quiz.js/unlike: ${err}`);
+  }
+});
 
 quizRouter.put("/addLiked/:quizId/:userId", async (req, res) => {
   try {
-    //check to see if a likedBy Object is there
-    //if not, initialize it
-    //LB obj will have userId as a property
-    //and true as the value
-
-    //if the likedBy property exists,
-    //then check to see if the user Id
-    //is there
-
-    //if not, return
     const { quizId, userId } = req.params;
     const quiz = await Quiz.findById(quizId);
-    if (!quiz.likedBy) {
-      const likedBy = { [userId]: true };
-      await Quiz.update({ _id: quizId }, { $set: { likedBy } });
+    const user = await User.findById(userId);
+    console.log(quiz.likedBy, user.likedQuizzes, "quizlb and userslq");
+    if (!quiz.likedBy || !user.likedQuizzes) {
+      console.log("got into the not liked");
+      let quizThere = quiz.likedBy === undefined;
+      let userThere = user.likedBy === undefined;
+      if (quizThere && userThere) {
+        console.log("went here or there");
+        const likedBy = { [userId]: true };
+        await Quiz.update({ _id: quizId }, { $set: { likedBy } });
+        const likedQuizzes = { [quizId]: true };
+        await User.update(
+          { _id: userId },
+          {
+            $set: {
+              likedQuizzes,
+            },
+          }
+        );
+      } else {
+        console.log("entered first else");
+        if (quizThere) {
+          console.log("entered quiz there");
+          const likedBy = { [userId]: true };
+          await Quiz.update({ _id: quizId }, { $set: { likedBy } });
+          await User.update(
+            { _id: userId },
+            {
+              $set: {
+                likedQuizzes: { ...user.likedQuizzes, [quizId]: true },
+              },
+            }
+          );
+        }
+        if (userThere) {
+          console.log("entered user there");
+
+          const likedQuizzes = { [quizId]: true };
+          await User.update(
+            { _id: userId },
+            {
+              $set: {
+                likedQuizzes,
+              },
+            }
+          );
+          await Quiz.update(
+            { _id: quizId },
+            {
+              $set: {
+                likedBy: { ...quiz.likedBy, [userId]: true },
+              },
+            }
+          );
+        }
+      }
     } else {
-      if (quiz.likedBy[userId]) {
+      if (quiz.likedBy[userId] || user.likedQuizzes[quizId]) {
         return res.send({ alreadyLiked: true });
       }
-      const likedBy = { ...quiz.likedBy, [userId]: true };
-      await Quiz.update({ _id: quizId }, { $set: { likedBy } });
-    }
-    const user = User.findById(userId);
-    if (!user.likedQuizzes) {
-      const likedQuizzes = { [quizId]: true };
+      console.log("got into the second else");
+      await Quiz.update(
+        { _id: quizId },
+        { $set: { likedBy: { ...quiz.likedBy, [userId]: true } } }
+      );
+      console.log("updated quiz");
       await User.update(
         { _id: userId },
         {
           $set: {
-            likedQuizzes,
+            likedQuizzes: { ...user.likedQuizzes, [quizId]: true },
           },
         }
       );
@@ -77,8 +168,124 @@ quizRouter.put("/addLiked/:quizId/:userId", async (req, res) => {
     const market = await Market.findOne({ makerId: quizId });
     const newLikes = { ...market.likes };
     newLikes.likes = newLikes.likes + 1;
-    newLikes.total = newLikes.likes + newLikes.dislikes;
+    newLikes.total = newLikes.likes - newLikes.dislikes;
     await Market.update({ _id: market._id }, { $set: { likes: newLikes } });
+    if (user.quizzesOwned && user.quizzesOwned[quizId]) {
+      const newQuiz = await Quiz.findById(quizId);
+      await User.update(
+        { _id: userId },
+        { $set: { quizzesOwned: { ...user.quizzesOwned, [quizId]: newQuiz } } }
+      );
+    }
+    return res.send(true);
+  } catch (err) {
+    console.log(`You had an error at get quiz.js/addLiked: ${err}`);
+    return res.send(false);
+  }
+});
+quizRouter.put("/addDisliked/:quizId/:userId", async (req, res) => {
+  try {
+    const { quizId, userId } = req.params;
+    const quiz = await Quiz.findById(quizId);
+    const user = await User.findById(userId);
+    if (!quiz.dislikedBy || !user.dislikedQuizzes) {
+      let quizThere = quiz.dislikedBy === undefined;
+      let userThere = user.dislikedBy === undefined;
+      if (quizThere && userThere) {
+        const dislikedBy = { [userId]: true };
+        await Quiz.update({ _id: quizId }, { $set: { dislikedBy } });
+        const dislikedQuizzes = { [quizId]: true };
+        await User.update(
+          { _id: userId },
+          {
+            $set: {
+              dislikedQuizzes,
+            },
+          }
+        );
+      } else {
+        if (quizThere) {
+          console.log("entered quiz there");
+          const dislikedBy = { [userId]: true };
+          await Quiz.update({ _id: quizId }, { $set: { dislikedBy } });
+          await User.update(
+            { _id: userId },
+            {
+              $set: {
+                dislikedQuizzes: { ...user.dislikedQuizzes, [quizId]: true },
+              },
+            }
+          );
+        }
+        if (userThere) {
+          const dislikedQuizzes = { [quizId]: true };
+          await User.update(
+            { _id: userId },
+            {
+              $set: {
+                dislikedQuizzes,
+              },
+            }
+          );
+          await Quiz.update(
+            { _id: quizId },
+            {
+              $set: {
+                dislikedBy: { ...quiz.dislikedBy, [userId]: true },
+              },
+            }
+          );
+        }
+      }
+    } else {
+      if (quiz.dislikedBy[userId] || user.dislikedQuizzes[quizId]) {
+        return res.send({ alreadyDisliked: true });
+      }
+      await Quiz.update(
+        { _id: quizId },
+        { $set: { dislikedBy: { ...quiz.dislikedBy, [userId]: true } } }
+      );
+      await User.update(
+        { _id: userId },
+        {
+          $set: {
+            dislikedQuizzes: { ...user.dislikedQuizzes, [quizId]: true },
+          },
+        }
+      );
+    }
+
+    if (!quiz.dislikes) {
+      await Quiz.update(
+        { _id: quiz._id },
+        {
+          $set: {
+            dislikes: 1,
+          },
+        }
+      );
+    } else {
+      await Quiz.update(
+        { _id: quizId },
+        {
+          $set: {
+            likes: quiz.likes + 1,
+          },
+        }
+      );
+    }
+    const market = await Market.findOne({ makerId: quizId });
+    const newLikes = { ...market.likes };
+    newLikes.likes = newLikes.dislikes + 1;
+    newLikes.total = newLikes.likes - newLikes.dislikes;
+    await Market.update({ _id: market._id }, { $set: { likes: newLikes } });
+    if (user.quizzesOwned && user.quizzesOwned[quizId]) {
+      const newQuiz = await Quiz.findById(quizId);
+      await User.update(
+        { _id: userId },
+        { $set: { quizzesOwned: { ...user.quizzesOwned, [quizId]: newQuiz } } }
+      );
+    }
     return res.send(true);
   } catch (err) {
     console.log(`You had an error at get quiz.js/addLiked: ${err}`);
