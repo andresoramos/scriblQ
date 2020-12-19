@@ -23,6 +23,42 @@ const checkForLiked = (quiz, user) => {
   }
   return true;
 };
+const checkForDisliked = (quiz, user) => {
+  let quizThere = true;
+  let userThere = true;
+  if (!quiz.dislikedBy[user._id]) {
+    userThere = false;
+  }
+  if (!user.dislikedQuizzes[quiz._id]) {
+    quizThere = false;
+  }
+  if (!quizThere || !userThere) {
+    return false;
+  }
+  return true;
+};
+quizRouter.put("/delete/:quizId/:userId", async (req, res) => {
+  try {
+    const { quizId, userId } = req.params;
+    const user = await User.findById(userId);
+    let quizzesOwned = { ...user.quizzesOwned };
+    console.log({ ...quizzesOwned });
+    delete quizzesOwned[quizId];
+    console.log(quizzesOwned);
+    // await User.update({_id: userId},{$set:{quizzesOwned}})
+    let likedQuizzes = { ...user.likedQuizzes };
+    delete likedQuizzes[quizId];
+    await User.update({ _id: userId }, { $set: { likedQuizzes } });
+    // first, delete it from the user obj
+    //then, if the user has it as a favorited quiz,
+    //deleted from their likedQuizzes obj
+    //repeat it if they've got it as a disliked quiz
+
+    res.send(true);
+  } catch (err) {
+    console.log(`You had an error at get quiz.js/delete: ${err}`);
+  }
+});
 quizRouter.get("/", async (req, res) => {
   try {
     const quiz = await Quiz.find();
@@ -54,7 +90,43 @@ quizRouter.put("/unlike/:quizId/:userId", async (req, res) => {
     await Market.update({ _id: market._id }, { $set: { likes: marketLikes } });
     if (user.quizzesOwned && user.quizzesOwned[quizId]) {
       const newQuiz = await Quiz.findById(quizId);
-      console.log(newQuiz.likedBy, "this should be empty", user._id);
+      await User.update(
+        { _id: userId },
+        { $set: { quizzesOwned: { ...user.quizzesOwned, [quizId]: newQuiz } } }
+      );
+    }
+    res.send(true);
+  } catch (err) {
+    console.log(`You had an error at get quiz.js/unlike: ${err}`);
+  }
+});
+quizRouter.put("/unDislike/:quizId/:userId", async (req, res) => {
+  try {
+    const { quizId, userId } = req.params;
+    const quiz = await Quiz.findById(quizId);
+    const user = await User.findById(userId);
+    const market = await Market.findOne({ makerId: quizId });
+    const confirmDisliked = checkForDisliked(quiz, user);
+    if (!confirmDisliked) {
+      return res.send({ notLiked: true });
+    }
+    let dislikedQuizzes = { ...user.dislikedQuizzes };
+    delete dislikedQuizzes[quizId];
+    await User.update({ _id: userId }, { $set: { dislikedQuizzes } });
+    const dislikes = quiz.dislikes + 1;
+    let dislikedBy = { ...quiz.dislikedBy };
+    delete dislikedBy[userId];
+    await Quiz.update({ _id: quizId }, { $set: { dislikes, dislikedBy } });
+    let marketDislikes = { ...market.likes };
+    marketDislikes.total = market.likes.total + 1;
+    marketDislikes.dislikes = market.likes.dislikes - 1;
+    await Market.update(
+      { _id: market._id },
+      { $set: { dislikes: marketDislikes } }
+    );
+    if (user.quizzesOwned && user.quizzesOwned[quizId]) {
+      const newQuiz = await Quiz.findById(quizId);
+      console.log(newQuiz, "you're finding the new quiz");
       await User.update(
         { _id: userId },
         { $set: { quizzesOwned: { ...user.quizzesOwned, [quizId]: newQuiz } } }
@@ -276,7 +348,7 @@ quizRouter.put("/addDisliked/:quizId/:userId", async (req, res) => {
     }
     const market = await Market.findOne({ makerId: quizId });
     const newLikes = { ...market.likes };
-    newLikes.likes = newLikes.dislikes + 1;
+    newLikes.dislikes = newLikes.dislikes + 1;
     newLikes.total = newLikes.likes - newLikes.dislikes;
     await Market.update({ _id: market._id }, { $set: { likes: newLikes } });
     if (user.quizzesOwned && user.quizzesOwned[quizId]) {
