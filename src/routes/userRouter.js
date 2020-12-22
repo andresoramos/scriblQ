@@ -7,6 +7,7 @@ const userRouter = express.Router();
 const bcrypt = require("bcrypt");
 const _ = require("lodash");
 const decode = require("jwt-decode");
+const quizRouter = require("./quiz");
 userRouter.get("/", async (req, res) => {
   var ip = req.ip;
   console.log(ip, "this is the ip");
@@ -50,22 +51,26 @@ userRouter.post("/tradeFunds", async (req, res) => {
   try {
     const { amount, userId, creatorId, quizId } = req.body;
     const buyer = await User.findById(userId);
-    const { balance } = buyer;
-    const newBalance = balance - amount;
-    await User.update({ _id: buyer._id }, { $set: { balance: newBalance } });
+    const quizObj = await Market.findOne({ makerId: quizId });
     const seller = await User.findById(creatorId);
     if (JSON.stringify(seller._id) === JSON.stringify(buyer._id)) {
       return res.status(404).send("You cannot buy your own quiz.");
     }
-    const quizObj = await Market.findOne({ makerId: quizId });
     if (quizObj.downloadedBy[buyer._id] === undefined) {
       await Market.update(
         { _id: quizObj._id },
-        { $set: { downloadedBy: { [buyer._id]: Date.now() } } }
+        {
+          $set: {
+            downloadedBy: { ...quizObj.downloadedBy, [buyer._id]: Date.now() },
+          },
+        }
       );
     } else {
-      res.status(404).send("You already own this quiz.");
+      return res.status(404).send("You already own this quiz.");
     }
+    const { balance } = buyer;
+    const newBalance = balance - amount;
+    await User.update({ _id: buyer._id }, { $set: { balance: newBalance } });
     const sellerBalance = seller.balance;
     if (!sellerBalance) {
       await User.update({ _id: seller._id }, { $set: { balance: amount } });
@@ -120,11 +125,11 @@ userRouter.post("/exists", async (req, res) => {
   }
 });
 
-userRouter.put("/addCreator/:id", async (req, res) => {
+userRouter.put("/addCreator/:id/:quizId", async (req, res) => {
   try {
-    const { id } = req.params;
+    const { id, quizId } = req.params;
     const user = await User.findById(id);
-    const market = await Market.findOne({ creatorId: id });
+    const market = await Market.findOne({ makerId: quizId });
     res.send({ user, description: market.description });
   } catch (error) {
     return res.send(false);

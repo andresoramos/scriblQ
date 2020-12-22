@@ -40,20 +40,30 @@ const checkForDisliked = (quiz, user) => {
 quizRouter.put("/delete/:quizId/:userId", async (req, res) => {
   try {
     const { quizId, userId } = req.params;
+    const quiz = await Quiz.findById(quizId);
     const user = await User.findById(userId);
+    const market = await Market.findOne({ makerId: quizId });
     let quizzesOwned = { ...user.quizzesOwned };
-    console.log({ ...quizzesOwned });
     delete quizzesOwned[quizId];
-    console.log(quizzesOwned);
-    // await User.update({_id: userId},{$set:{quizzesOwned}})
-    let likedQuizzes = { ...user.likedQuizzes };
-    delete likedQuizzes[quizId];
-    await User.update({ _id: userId }, { $set: { likedQuizzes } });
-    // first, delete it from the user obj
-    //then, if the user has it as a favorited quiz,
-    //deleted from their likedQuizzes obj
-    //repeat it if they've got it as a disliked quiz
-
+    await User.update({ _id: userId }, { $set: { quizzesOwned } });
+    if (user.likedQuizzes && user.likedQuizzes[quizId]) {
+      let likedQuizzes = { ...user.likedQuizzes };
+      delete likedQuizzes[quizId];
+      await User.update({ _id: userId }, { $set: { likedQuizzes } });
+    }
+    if (user.dislikedQuizzes && user.dislikedQuizzes[quizId]) {
+      let dislikedQuizzes = { ...user.dislikedQuizzes };
+      delete dislikedQuizzes[quizId];
+      await User.update({ _id: userId }, { $set: { dislikedQuizzes } });
+    }
+    if (quiz.likedBy && quiz.likedBy[userId]) {
+      let likedBy = { ...quiz.likedBy };
+      delete likedBy[userId];
+      await Quiz.update({ _id: quizId }, { $set: { likedBy } });
+    }
+    const downloadedBy = { ...market.downloadedBy };
+    delete downloadedBy[userId];
+    await Market.update({ _id: market._id }, { $set: { downloadedBy } });
     res.send(true);
   } catch (err) {
     console.log(`You had an error at get quiz.js/delete: ${err}`);
@@ -378,6 +388,19 @@ quizRouter.post("/paidQuizzes", async (req, res) => {
     return res.send(quizzes);
   } catch (err) {
     console.log(`You had an error at get quiz.js/paidQuizzes: ${err}`);
+  }
+});
+quizRouter.put("/boughtQuizzes/:userId", async (req, res) => {
+  try {
+    //find the user from params userId
+    const { userId } = req.params;
+    const user = await User.findById(userId);
+    if (user.quizzesOwned) {
+      return res.send(user.quizzesOwned);
+    }
+    res.send(false);
+  } catch (err) {
+    console.log(`You had an error at get quiz.js/boughtQuizzes: ${err}`);
   }
 });
 quizRouter.post("/download", async (req, res) => {
