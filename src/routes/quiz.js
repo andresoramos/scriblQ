@@ -61,6 +61,11 @@ quizRouter.put("/delete/:quizId/:userId", async (req, res) => {
       delete likedBy[userId];
       await Quiz.update({ _id: quizId }, { $set: { likedBy } });
     }
+    if (quiz.dislikedBy && quiz.dislikedBy[userId]) {
+      let dislikedBy = { ...quiz.dislikedBy };
+      delete dislikedBy[userId];
+      await Quiz.update({ _id: quizId }, { $set: { dislikedBy } });
+    }
     const downloadedBy = { ...market.downloadedBy };
     delete downloadedBy[userId];
     await Market.update({ _id: market._id }, { $set: { downloadedBy } });
@@ -120,10 +125,11 @@ quizRouter.put("/unDislike/:quizId/:userId", async (req, res) => {
     if (!confirmDisliked) {
       return res.send({ notLiked: true });
     }
+    console.log("you did indeed dislike the quiz");
     let dislikedQuizzes = { ...user.dislikedQuizzes };
     delete dislikedQuizzes[quizId];
     await User.update({ _id: userId }, { $set: { dislikedQuizzes } });
-    const dislikes = quiz.dislikes + 1;
+    const dislikes = quiz.dislikes - 1;
     let dislikedBy = { ...quiz.dislikedBy };
     delete dislikedBy[userId];
     await Quiz.update({ _id: quizId }, { $set: { dislikes, dislikedBy } });
@@ -132,7 +138,7 @@ quizRouter.put("/unDislike/:quizId/:userId", async (req, res) => {
     marketDislikes.dislikes = market.likes.dislikes - 1;
     await Market.update(
       { _id: market._id },
-      { $set: { dislikes: marketDislikes } }
+      { $set: { likes: marketDislikes } }
     );
     if (user.quizzesOwned && user.quizzesOwned[quizId]) {
       const newQuiz = await Quiz.findById(quizId);
@@ -417,6 +423,12 @@ quizRouter.post("/download", async (req, res) => {
     const { user } = req.body;
     const marketObj = await Market.findOne({ makerId: _id });
     if (marketObj.history.charge && marketObj.history.number) {
+      //Notes for 12/29/2020
+      //In here, you'll have to have different outcomes for what happens if you have hidden questions
+      //If there are hidden questions, what you'll probably have to do is include something in the return obj
+      //that tells handle buy that they'll have to prune off some questions.  It might be easiest for that thing
+      //to be an object that contains the exact questions you'll need to hide from the recipient
+
       return res.send({ charge: true, cost: marketObj.history.number });
     }
     //create a situation that sends back an object with premium questions if there are any
@@ -440,10 +452,14 @@ quizRouter.post("/quizStats", async (req, res) => {
     return res.send("Id length is too long.");
   }
   try {
+    const { userId } = req.body;
     let foundQuizzes = [];
     const findTries = await ScoredQuiz.find();
     for (var i = 0; i < findTries.length; i++) {
-      if (findTries[i].relatedId === req.body.id) {
+      if (
+        findTries[i].relatedId === req.body.id &&
+        findTries[i].takenBy === userId
+      ) {
         foundQuizzes.push(findTries[i]);
       }
     }
@@ -454,7 +470,7 @@ quizRouter.post("/quizStats", async (req, res) => {
 });
 
 quizRouter.post("/ScoredQuiz", async (req, res) => {
-  console.log(req.body, "check earned");
+  const { userId } = req.body;
   const { error } = validateScoredObject(req.body);
   if (error) {
     console.log(error.details[0].message);
@@ -463,21 +479,19 @@ quizRouter.post("/ScoredQuiz", async (req, res) => {
   const newDate = new Date(Date.now());
   const stringDate = JSON.stringify(newDate);
   const prunedDate = createDate(stringDate);
-  const fixQuizCount = await updateQuizNumber(req.body.idNumber);
-  console.log(fixQuizCount, typeof fixQuizCount);
   const savePayload = {
     relatedId: req.body.idNumber,
-    tryCount: fixQuizCount,
     score: {
       earned: req.body.earned,
       possible: req.body.possible,
       specifics: req.body.specifics,
     },
+    takenBy: userId,
     dateTaken: prunedDate,
   };
   const savedResponse = await new ScoredQuiz(savePayload);
   savedResponse.save();
-
+  console.log("You managed to save things after all");
   res.send(savedResponse);
 });
 
@@ -739,9 +753,14 @@ quizRouter.post("/saveQuiz", async (req, res) => {
     console.log(err, "Error from quiz.js route.");
   }
 });
-const updateQuizNumber = async (id) => {
+const updateQuizNumber = async (id, userId) => {
   try {
     const selectedQuiz = await Quiz.findById(id);
+    if (selectedQuiz === null) {
+      const scoredQuiz = await ScoredQuiz.find({ relatedId: id });
+      console.log(scoredQuiz, "this should be all of the scored quizzes");
+      return 4;
+    }
     const fixedNum = await Quiz.update(
       { _id: id },
       { $set: { creationNumber: selectedQuiz.creationNumber + 1 } }

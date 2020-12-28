@@ -135,10 +135,8 @@ const createComparisonObj = (market) => {
 };
 
 marketRouter.post("/findMarketObj", async (req, res) => {
-  console.log("We're hitting market obj");
   if (req.body.list) {
     const { id } = req.body;
-    console.log(id);
     const marketList = await Market.find();
     let collection = [];
     for (var i = 0; i < marketList.length; i++) {
@@ -149,7 +147,10 @@ marketRouter.post("/findMarketObj", async (req, res) => {
     let names = [];
     for (i = 0; i < collection.length; i++) {
       const quizName = await Quiz.findById(collection[i].makerId);
-      names.push(quizName);
+
+      if (quizName) {
+        names.push(quizName);
+      }
     }
 
     return res.send(names);

@@ -8,10 +8,7 @@ const scoredQuizSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
-    tryCount: {
-      type: Number,
-      required: true,
-    },
+
     score: {
       type: Object,
       required: true,
@@ -19,6 +16,7 @@ const scoredQuizSchema = new mongoose.Schema(
     dateTaken: {
       type: String,
     },
+    takenBy: { type: String, required: true },
   },
   { minimize: false }
 );
@@ -29,6 +27,7 @@ function validateScoredObject(quiz) {
     possible: Joi.number().required(),
     specifics: Joi.object().required(),
     idNumber: Joi.string().min(1).max(10000),
+    userId: Joi.string().min(1).max(10000),
   });
 
   return ({ error, value } = schema.validate(quiz));
