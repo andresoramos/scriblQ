@@ -49,7 +49,7 @@ userRouter.post("/addFunds", async (req, res) => {
 });
 userRouter.post("/tradeFunds", async (req, res) => {
   try {
-    const { amount, userId, creatorId, quizId } = req.body;
+    const { amount, userId, creatorId, quizId, hidden } = req.body;
     const buyer = await User.findById(userId);
     const quizObj = await Market.findOne({ makerId: quizId });
     const seller = await User.findById(creatorId);
@@ -95,7 +95,7 @@ userRouter.post("/tradeFunds", async (req, res) => {
         },
       }
     );
-    await buyService(quizId, userId);
+    await buyService(quizId, userId, hidden);
 
     res.send(true);
   } catch (err) {

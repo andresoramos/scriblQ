@@ -7,6 +7,8 @@ const { User } = require("../models/Users");
 const { Market } = require("../models/Market");
 const { Maker } = require("../models/Makers");
 const { ScoredQuiz, validateScoredObject } = require("../models/ScoredQuiz");
+const { hideQuizQuestions } = require("../Services/hideQuestionsService");
+const _ = require("lodash");
 const createDate = require("../Services/createDate");
 
 const checkForLiked = (quiz, user) => {
@@ -82,9 +84,9 @@ quizRouter.get("/", async (req, res) => {
     console.log(`You had an error at get quiz.js/: ${err}`);
   }
 });
-quizRouter.put("/unlike/:quizId/:userId", async (req, res) => {
+quizRouter.post("/unlike", async (req, res) => {
   try {
-    const { quizId, userId } = req.params;
+    const { quizId, userId, hidden } = req.body;
     const quiz = await Quiz.findById(quizId);
     const user = await User.findById(userId);
     const market = await Market.findOne({ makerId: quizId });
@@ -104,7 +106,14 @@ quizRouter.put("/unlike/:quizId/:userId", async (req, res) => {
     marketLikes.likes = market.likes.likes - 1;
     await Market.update({ _id: market._id }, { $set: { likes: marketLikes } });
     if (user.quizzesOwned && user.quizzesOwned[quizId]) {
-      const newQuiz = await Quiz.findById(quizId);
+      let newQuiz = await Quiz.findById(quizId);
+      if (hidden) {
+        newQuiz = hideQuizQuestions(newQuiz, hidden);
+        console.log(
+          newQuiz,
+          "You got into the right spot and this is the new quiz"
+        );
+      }
       await User.update(
         { _id: userId },
         { $set: { quizzesOwned: { ...user.quizzesOwned, [quizId]: newQuiz } } }
@@ -115,9 +124,9 @@ quizRouter.put("/unlike/:quizId/:userId", async (req, res) => {
     console.log(`You had an error at get quiz.js/unlike: ${err}`);
   }
 });
-quizRouter.put("/unDislike/:quizId/:userId", async (req, res) => {
+quizRouter.post("/unDislike", async (req, res) => {
   try {
-    const { quizId, userId } = req.params;
+    const { quizId, userId, hidden } = req.body;
     const quiz = await Quiz.findById(quizId);
     const user = await User.findById(userId);
     const market = await Market.findOne({ makerId: quizId });
@@ -125,7 +134,6 @@ quizRouter.put("/unDislike/:quizId/:userId", async (req, res) => {
     if (!confirmDisliked) {
       return res.send({ notLiked: true });
     }
-    console.log("you did indeed dislike the quiz");
     let dislikedQuizzes = { ...user.dislikedQuizzes };
     delete dislikedQuizzes[quizId];
     await User.update({ _id: userId }, { $set: { dislikedQuizzes } });
@@ -141,8 +149,10 @@ quizRouter.put("/unDislike/:quizId/:userId", async (req, res) => {
       { $set: { likes: marketDislikes } }
     );
     if (user.quizzesOwned && user.quizzesOwned[quizId]) {
-      const newQuiz = await Quiz.findById(quizId);
-      console.log(newQuiz, "you're finding the new quiz");
+      let newQuiz = await Quiz.findById(quizId);
+      if (hidden) {
+        newQuiz = hideQuizQuestions(newQuiz, hidden);
+      }
       await User.update(
         { _id: userId },
         { $set: { quizzesOwned: { ...user.quizzesOwned, [quizId]: newQuiz } } }
@@ -154,12 +164,12 @@ quizRouter.put("/unDislike/:quizId/:userId", async (req, res) => {
   }
 });
 
-quizRouter.put("/addLiked/:quizId/:userId", async (req, res) => {
+quizRouter.post("/addLiked", async (req, res) => {
   try {
-    const { quizId, userId } = req.params;
+    const { quizId, userId, hidden } = req.body;
     const quiz = await Quiz.findById(quizId);
     const user = await User.findById(userId);
-    console.log(quiz.likedBy, user.likedQuizzes, "quizlb and userslq");
+
     if (!quiz.likedBy || !user.likedQuizzes) {
       console.log("got into the not liked");
       let quizThere = quiz.likedBy === undefined;
@@ -193,8 +203,6 @@ quizRouter.put("/addLiked/:quizId/:userId", async (req, res) => {
           );
         }
         if (userThere) {
-          console.log("entered user there");
-
           const likedQuizzes = { [quizId]: true };
           await User.update(
             { _id: userId },
@@ -259,7 +267,10 @@ quizRouter.put("/addLiked/:quizId/:userId", async (req, res) => {
     newLikes.total = newLikes.likes - newLikes.dislikes;
     await Market.update({ _id: market._id }, { $set: { likes: newLikes } });
     if (user.quizzesOwned && user.quizzesOwned[quizId]) {
-      const newQuiz = await Quiz.findById(quizId);
+      let newQuiz = await Quiz.findById(quizId);
+      if (hidden) {
+        newQuiz = hideQuizQuestions(newQuiz, hidden);
+      }
       await User.update(
         { _id: userId },
         { $set: { quizzesOwned: { ...user.quizzesOwned, [quizId]: newQuiz } } }
@@ -271,9 +282,10 @@ quizRouter.put("/addLiked/:quizId/:userId", async (req, res) => {
     return res.send(false);
   }
 });
-quizRouter.put("/addDisliked/:quizId/:userId", async (req, res) => {
+
+quizRouter.post("/addDisliked", async (req, res) => {
   try {
-    const { quizId, userId } = req.params;
+    const { quizId, userId, hidden } = req.body;
     const quiz = await Quiz.findById(quizId);
     const user = await User.findById(userId);
     if (!quiz.dislikedBy || !user.dislikedQuizzes) {
@@ -368,7 +380,10 @@ quizRouter.put("/addDisliked/:quizId/:userId", async (req, res) => {
     newLikes.total = newLikes.likes - newLikes.dislikes;
     await Market.update({ _id: market._id }, { $set: { likes: newLikes } });
     if (user.quizzesOwned && user.quizzesOwned[quizId]) {
-      const newQuiz = await Quiz.findById(quizId);
+      let newQuiz = await Quiz.findById(quizId);
+      if (hidden) {
+        newQuiz = hideQuizQuestions(newQuiz, hidden);
+      }
       await User.update(
         { _id: userId },
         { $set: { quizzesOwned: { ...user.quizzesOwned, [quizId]: newQuiz } } }
@@ -422,7 +437,19 @@ quizRouter.post("/download", async (req, res) => {
     const { _id } = req.body.quiz;
     const { user } = req.body;
     const marketObj = await Market.findOne({ makerId: _id });
+    console.log(marketObj.history, "this is what da history say");
     if (marketObj.history.charge && marketObj.history.number) {
+      if (
+        marketObj.history.hide &&
+        Object.keys(marketObj.history.hideQuestions).length > 0
+      ) {
+        console.log("entering the right part back here");
+        return res.send({
+          charge: true,
+          cost: marketObj.history.number,
+          hidden: marketObj.history.hideQuestions,
+        });
+      }
       //Notes for 12/29/2020
       //In here, you'll have to have different outcomes for what happens if you have hidden questions
       //If there are hidden questions, what you'll probably have to do is include something in the return obj
