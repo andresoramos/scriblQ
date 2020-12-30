@@ -2,13 +2,14 @@ const express = require("express");
 const mongoose = require("mongoose");
 const quizRouter = express.Router();
 const { Quiz, validateUser } = require("../models/Quiz");
-const { UserAccount, validateAccount } = require("../models/UserAccount");
+const { UserAccount } = require("../models/UserAccount");
 const { User } = require("../models/Users");
 const { Market } = require("../models/Market");
 const { Maker } = require("../models/Makers");
 const { ScoredQuiz, validateScoredObject } = require("../models/ScoredQuiz");
 const { hideQuizQuestions } = require("../Services/hideQuestionsService");
 const _ = require("lodash");
+const { completeDownload } = require("../Services/buyService");
 const createDate = require("../Services/createDate");
 
 const checkForLiked = (quiz, user) => {
@@ -425,11 +426,6 @@ quizRouter.put("/boughtQuizzes/:userId", async (req, res) => {
   }
 });
 quizRouter.post("/download", async (req, res) => {
-  //Find Quiz and User
-  //Look through the history in the market obj
-  //check to see if the quiz charges.  If so, inform user that they need to pay
-  //and create dialogue box that allows exchange of funds
-
   //Check to see if there are premium questions - if there are, give them the
   //option to either not get the premiums, to buy them all, or to select which ones they want
   //If there are hidden questions, make sure to remove them before the user has access to them
@@ -437,26 +433,25 @@ quizRouter.post("/download", async (req, res) => {
     const { _id } = req.body.quiz;
     const { user } = req.body;
     const marketObj = await Market.findOne({ makerId: _id });
-    console.log(marketObj.history, "this is what da history say");
     if (marketObj.history.charge && marketObj.history.number) {
       if (
         marketObj.history.hide &&
         Object.keys(marketObj.history.hideQuestions).length > 0
       ) {
-        console.log("entering the right part back here");
         return res.send({
           charge: true,
           cost: marketObj.history.number,
           hidden: marketObj.history.hideQuestions,
         });
       }
-      //Notes for 12/29/2020
-      //In here, you'll have to have different outcomes for what happens if you have hidden questions
-      //If there are hidden questions, what you'll probably have to do is include something in the return obj
-      //that tells handle buy that they'll have to prune off some questions.  It might be easiest for that thing
-      //to be an object that contains the exact questions you'll need to hide from the recipient
 
       return res.send({ charge: true, cost: marketObj.history.number });
+    }
+    if (
+      marketObj.history.hide &&
+      Object.keys(marketObj.history.hideQuestions) > 0
+    ) {
+      return res.send({ hidden: marketObj.history.hideQuestions });
     }
     //create a situation that sends back an object with premium questions if there are any
 
@@ -496,6 +491,18 @@ quizRouter.post("/quizStats", async (req, res) => {
   }
 });
 
+quizRouter.post("/freeDownloadService", async (req, res) => {
+  try {
+    const { userId, quiz } = req.body;
+    const downloadCompleted = await completeDownload(quiz, userId);
+    if (downloadCompleted.downloaded) {
+      return res.send(true);
+    }
+    res.send(false);
+  } catch (error) {
+    console.log(`You had an error at quiz.js/freeDownloadService: ${error}`);
+  }
+});
 quizRouter.post("/ScoredQuiz", async (req, res) => {
   const { userId } = req.body;
   const { error } = validateScoredObject(req.body);

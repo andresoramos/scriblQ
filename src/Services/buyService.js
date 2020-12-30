@@ -1,6 +1,7 @@
 const { User, validateUser } = require("../models/Users");
 const { Quiz } = require("../models/Quiz");
 const _ = require("lodash");
+const { Market } = require("../models/Market");
 
 const buyService = async (quizId, userId, hidden) => {
   //find the quiz
@@ -18,7 +19,6 @@ const buyService = async (quizId, userId, hidden) => {
     newQuiz.questions = fixedQuestions;
     newQuiz.hidden = hidden;
     quiz = newQuiz;
-    console.log(Object.keys(quiz), "it should fucking be here");
   }
   if (!user.quizzesOwned) {
     await User.update(
@@ -33,4 +33,44 @@ const buyService = async (quizId, userId, hidden) => {
   }
 };
 
-module.exports = { buyService };
+const completeDownload = async (quiz, userId) => {
+  try {
+    const user = await User.findById(userId);
+    const market = await Market.findOne({ makerId: quiz._id });
+    if (user.quizzesOwned && user.quizzesOwned[quiz._id]) {
+      return { quizOwned: true };
+    } else {
+      if (user.quizzesOwned) {
+        let newOwned = _.cloneDeep(user.quizzesOwned);
+        newOwned[quiz._id] = quiz;
+        await User.update(
+          { _id: userId },
+          { $set: { quizzesOwned: newOwned } }
+        );
+      } else {
+        let quizzesOwned = { [quiz._id]: quiz };
+        await User.update({ _id: userId }, { $set: { quizzesOwned } });
+      }
+    }
+    if (market.downloadedBy) {
+      await Market.update(
+        { _id: market._id },
+        {
+          $set: {
+            downloadedBy: { ...market.downloadedBy, [userId]: Date.now() },
+          },
+        }
+      );
+    } else {
+      let downloadedBy = { userId: Date.now() };
+      await Market.update({ _id: market._id }, { $set: { downloadedBy } });
+    }
+    return { downloaded: true };
+  } catch (error) {
+    console.log(
+      `There was an error in buyService.js/completeDownload: ${error}`
+    );
+  }
+};
+
+module.exports = { buyService, completeDownload };
