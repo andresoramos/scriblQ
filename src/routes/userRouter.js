@@ -135,6 +135,15 @@ userRouter.put("/addCreator/:id/:quizId", async (req, res) => {
     return res.send(false);
   }
 });
+userRouter.put("/lastDownloaded/:userId", async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const user = await User.findById(userId);
+    return res.send(user.lastDownload);
+  } catch (error) {
+    console.log(`You had an error at userRouter.js/getLastDownloadedQuiz`);
+  }
+});
 
 userRouter.post("/", async (req, res) => {
   const valid = validateUser(req.body);

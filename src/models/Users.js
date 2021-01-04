@@ -25,6 +25,7 @@ const userSchema = new mongoose.Schema(
       minlength: 5,
       maxlength: 1024,
     },
+    lastDownload: { type: Object },
     balance: { type: Number },
     quizzesOwned: { type: Object },
     likedQuizzes: { type: Object },

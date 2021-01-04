@@ -23,12 +23,20 @@ const buyService = async (quizId, userId, hidden) => {
   if (!user.quizzesOwned) {
     await User.update(
       { _id: userId },
-      { $set: { quizzesOwned: { [quizId]: quiz } } }
+      { $set: { quizzesOwned: { [quizId]: quiz }, lastDownload: quiz } }
     );
   } else {
     await User.update(
       { _id: userId },
-      { $set: { quizzesOwned: { ...user.quizzesOwned, [quizId]: quiz } } }
+      {
+        $set: {
+          quizzesOwned: {
+            ...user.quizzesOwned,
+            [quizId]: quiz,
+          },
+          lastDownload: quiz,
+        },
+      }
     );
   }
 };
@@ -45,11 +53,14 @@ const completeDownload = async (quiz, userId) => {
         newOwned[quiz._id] = quiz;
         await User.update(
           { _id: userId },
-          { $set: { quizzesOwned: newOwned } }
+          { $set: { quizzesOwned: newOwned, lastDownload: quiz } }
         );
       } else {
         let quizzesOwned = { [quiz._id]: quiz };
-        await User.update({ _id: userId }, { $set: { quizzesOwned } });
+        await User.update(
+          { _id: userId },
+          { $set: { quizzesOwned, lastDownload: quiz } }
+        );
       }
     }
     if (market.downloadedBy) {

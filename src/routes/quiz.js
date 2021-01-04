@@ -453,17 +453,12 @@ quizRouter.post("/download", async (req, res) => {
     ) {
       return res.send({ hidden: marketObj.history.hideQuestions });
     }
+
     //create a situation that sends back an object with premium questions if there are any
 
-    if (marketObj.downloadedBy[user._id] === undefined) {
-      await Market.update(
-        { _id: marketObj._id },
-        { $set: { downloadedBy: { [user._id]: Date.now() } } }
-      );
-    }
     //create a situation that tells front end to prune off hidden questions if there
     //are any by sending out an object with them
-    res.send(true);
+    res.send({ downloaded: true });
   } catch (err) {
     console.log(`You had an error at get quiz.js/download: ${err}`);
   }
@@ -491,6 +486,18 @@ quizRouter.post("/quizStats", async (req, res) => {
   }
 });
 
+quizRouter.put("/destroy/:userId", async (req, res) => {
+  const { userId } = req.params;
+  const markets = await Market.find();
+  for (var i = 0; i < markets.length; i++) {
+    await Market.update({ _id: market[i]._id }, { $set: { downloadedBy: {} } });
+  }
+  await User.update(
+    { _id: userId },
+    { $unset: { quizzesOwned: "", lastDownload: "" } }
+  );
+  await ScoredQuiz.deleteMany({});
+});
 quizRouter.post("/freeDownloadService", async (req, res) => {
   try {
     const { userId, quiz } = req.body;
