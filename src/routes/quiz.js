@@ -444,7 +444,6 @@ quizRouter.post("/download", async (req, res) => {
           hidden: marketObj.history.hideQuestions,
         });
       }
-
       return res.send({ charge: true, cost: marketObj.history.number });
     }
     if (
@@ -453,7 +452,11 @@ quizRouter.post("/download", async (req, res) => {
     ) {
       return res.send({ hidden: marketObj.history.hideQuestions });
     }
-
+    if (marketObj.history.chosenPremium && marketObj.history.premiumCost) {
+      if (Object.keys(marketObj.history.premiumCost).length > 0) {
+        return res.send({ premiumCost: marketObj.history.premiumCost });
+      }
+    }
     //create a situation that sends back an object with premium questions if there are any
 
     //create a situation that tells front end to prune off hidden questions if there

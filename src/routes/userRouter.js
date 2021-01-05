@@ -47,6 +47,17 @@ userRouter.post("/addFunds", async (req, res) => {
     console.log(`You've hit an error at userRouter.js/addFunds: ${err}`);
   }
 });
+userRouter.post("/premiumBuyService", async (req, res) => {
+  try {
+    const { quiz } = req.body;
+    console.log(quiz, "this is the quiz, jiz");
+    return res.send(true);
+  } catch (err) {
+    console.log(
+      `You've hit an error at userRouter.js/premiumBuyService: ${err}`
+    );
+  }
+});
 userRouter.post("/tradeFunds", async (req, res) => {
   try {
     const { amount, userId, creatorId, quizId, hidden } = req.body;
