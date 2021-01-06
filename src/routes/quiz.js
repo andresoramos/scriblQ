@@ -493,7 +493,10 @@ quizRouter.put("/destroy/:userId", async (req, res) => {
   const { userId } = req.params;
   const markets = await Market.find();
   for (var i = 0; i < markets.length; i++) {
-    await Market.update({ _id: market[i]._id }, { $set: { downloadedBy: {} } });
+    await Market.update(
+      { _id: markets[i]._id },
+      { $set: { downloadedBy: {} } }
+    );
   }
   await User.update(
     { _id: userId },

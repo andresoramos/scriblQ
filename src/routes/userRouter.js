@@ -34,30 +34,32 @@ userRouter.post("/balance", async (req, res) => {
 userRouter.post("/addFunds", async (req, res) => {
   try {
     const { amount, userId } = req.body;
-    const user = User.findById(userId);
+
+    const user = await User.findById(userId);
     const balance = user.balance;
     if (!balance) {
-      await User.update({ _id: userId }, { $set: { balance: amount } });
-      return res.send({ balance: amount });
+      await User.update({ _id: userId }, { $set: { balance: Number(amount) } });
+      return res.send({ balance: Number(amount) });
     }
-    const newAmount = balance + amount;
+    console.log(balance, amount, typeof balance, typeof amount);
+    const newAmount = Number(balance) + Number(amount);
     await User.update({ _id: userId }, { $set: { balance: newAmount } });
     return res.send({ balance: newAmount });
   } catch (err) {
     console.log(`You've hit an error at userRouter.js/addFunds: ${err}`);
   }
 });
-userRouter.post("/premiumBuyService", async (req, res) => {
-  try {
-    const { quiz } = req.body;
-    console.log(quiz, "this is the quiz, jiz");
-    return res.send(true);
-  } catch (err) {
-    console.log(
-      `You've hit an error at userRouter.js/premiumBuyService: ${err}`
-    );
-  }
-});
+// userRouter.post("/premiumBuyService", async (req, res) => {
+//   try {
+//     const { quiz, costs } = req.body;
+
+//     return res.send(true);
+//   } catch (err) {
+//     console.log(
+//       `You've hit an error at userRouter.js/premiumBuyService: ${err}`
+//     );
+//   }
+// });
 userRouter.post("/tradeFunds", async (req, res) => {
   try {
     const { amount, userId, creatorId, quizId, hidden } = req.body;
