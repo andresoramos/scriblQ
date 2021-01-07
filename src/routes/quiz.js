@@ -448,13 +448,22 @@ quizRouter.post("/download", async (req, res) => {
     }
     if (
       marketObj.history.hide &&
-      Object.keys(marketObj.history.hideQuestions) > 0
+      Object.keys(marketObj.history.hideQuestions) > 0 &&
+      !marketObj.history.premiumCost
     ) {
       return res.send({ hidden: marketObj.history.hideQuestions });
     }
-    if (marketObj.history.chosenPremium && marketObj.history.premiumCost) {
+    if (
+      (marketObj.history.chosenPremium && marketObj.history.premiumCost) ||
+      (marketObj.history.chosenPremium &&
+        marketObj.history.premiumCost &&
+        marketObj.history.hide)
+    ) {
       if (Object.keys(marketObj.history.premiumCost).length > 0) {
-        return res.send({ premiumCost: marketObj.history.premiumCost });
+        return res.send({
+          premiumCost: marketObj.history.premiumCost,
+          hidden: marketObj.history.hideQuestions,
+        });
       }
     }
     //create a situation that sends back an object with premium questions if there are any
