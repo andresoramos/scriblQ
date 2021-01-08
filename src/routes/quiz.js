@@ -597,14 +597,17 @@ quizRouter.put("/deleteQuiz", async (req, res) => {
 
 quizRouter.post("/savedQuiz", async (req, res) => {
   try {
-    const user = await User.findOne({ email: req.body.email });
+    console.log("Don't despair!  You're doing your best!");
+    const user = await User.findById(req.body.userId);
     const userId = user._id;
     const userAccounts = await UserAccount.find();
     let sentBack;
     for (var i = 0; i < userAccounts.length; i++) {
       if (JSON.stringify(userId) === JSON.stringify(userAccounts[i].userId)) {
         sentBack = { ...userAccounts[i]._doc };
-        sentBack.user = await User.findOne({ _id: userAccounts[i].userId });
+        // sentBack.user = await User.findOne({ _id: userAccounts[i].userId });
+        sentBack.user = await User.findById(req.body.userId);
+
         const quizUpdate = [...userAccounts[i].quizzes];
         for (var j = 0; j < quizUpdate.length; j++) {
           const dateCreated = quizUpdate[j].dateCreated;
@@ -617,6 +620,8 @@ quizRouter.post("/savedQuiz", async (req, res) => {
         }
       }
     }
+
+    // console.log(sentBack, "this is sent back");
     res.send(sentBack);
   } catch (err) {}
 });
@@ -687,7 +692,6 @@ quizRouter.post("/", async (req, res) => {
       userId: mongoose.Types.ObjectId(req.body.creatorId),
     });
     if (user === null) {
-      console.log("user null entered");
       const newQuiz = await createQuiz(req);
       const quizProfile = {
         userId: mongoose.Types.ObjectId(req.body.creatorId),
@@ -697,10 +701,8 @@ quizRouter.post("/", async (req, res) => {
       const newProfile = await new UserAccount(quizProfile);
       newProfile.save();
 
-      console.log("user null will be exited");
       return res.send(newProfile);
     }
-    console.log("entered the second part");
     const currentQuiz =
       user.lastId !== undefined ? await Quiz.findById(user.lastId) : null;
     //Keep working from here to see if you can solve the issues with creating quizzes here
@@ -713,7 +715,6 @@ quizRouter.post("/", async (req, res) => {
     }
 
     if (currentQuiz === null) {
-      console.log("YOU'VE HIT THE CURRENTQUIZ BEING NULL");
       const newQuiz = await createQuiz(req);
       const lastId = newQuiz._id;
       const id = user._id;
@@ -747,16 +748,9 @@ quizRouter.put("/updateMakers/:id", async (req, res) => {
   }
 });
 quizRouter.post("/saveQuiz", async (req, res) => {
-  console.log(
-    req.body,
-    "This is what it looks like when things enter the back end"
-  );
-
   try {
-    console.log("savequiz got to line: 251");
     const findUser = await User.findOne({ email: req.body.email });
     const userId = findUser._id;
-    console.log("savequiz got to line: 254");
     const checkForAccount = await UserAccount.findOne({
       userId: mongoose.Types.ObjectId(userId),
     });
@@ -800,10 +794,8 @@ quizRouter.post("/saveQuiz", async (req, res) => {
       userId: userId,
       quizzes: [quizObj],
     };
-    console.log("savequiz got to line: 303");
     const newProfile = await new UserAccount(quizProfile);
     newProfile.save();
-    console.log("savequiz got to line: 306");
     res.send(newProfile);
   } catch (err) {
     console.log(err, "Error from quiz.js route.");
@@ -814,7 +806,6 @@ const updateQuizNumber = async (id, userId) => {
     const selectedQuiz = await Quiz.findById(id);
     if (selectedQuiz === null) {
       const scoredQuiz = await ScoredQuiz.find({ relatedId: id });
-      console.log(scoredQuiz, "this should be all of the scored quizzes");
       return 4;
     }
     const fixedNum = await Quiz.update(
@@ -828,7 +819,6 @@ const updateQuizNumber = async (id, userId) => {
 };
 
 const createQuiz = async (req) => {
-  console.log(req.body.history, "This is history");
   const quiz = {
     name: req.body.name,
     questions: req.body.questions,

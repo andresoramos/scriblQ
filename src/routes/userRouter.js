@@ -8,12 +8,23 @@ const bcrypt = require("bcrypt");
 const _ = require("lodash");
 const decode = require("jwt-decode");
 const quizRouter = require("./quiz");
+
 userRouter.get("/", async (req, res) => {
   var ip = req.ip;
   console.log(ip, "this is the ip");
   const users = await User.find();
   if (users) {
     return res.send(users);
+  }
+});
+
+userRouter.put("/getUserInfo/:userId", async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const user = await User.findById(userId);
+    return res.send(user);
+  } catch (error) {
+    console.log(`There is an error at userRouter.js/getUserInfo: ${error}`);
   }
 });
 
@@ -30,6 +41,19 @@ userRouter.post("/balance", async (req, res) => {
     console.log(`You've hit an error at userRouter.js/balance: ${error}`);
   }
 });
+// userRouter.post("/createOpeningAccount", async (req, res) => {
+//   try {
+//     const quizProfile = {
+//       userId: mongoose.Types.ObjectId(req.body.creatorId),
+//       quizzes: [],
+//       lastId: newQuiz._id,
+//     };
+//     const newProfile = await new UserAccount(quizProfile);
+//     newProfile.save();
+//   } catch (error) {
+//     console.log(`You've hit an error at userRouter.js/createOpeningAccount: ${error}`);
+//   }
+// });
 
 userRouter.post("/addFunds", async (req, res) => {
   try {
@@ -67,6 +91,7 @@ userRouter.post("/tradeFunds", async (req, res) => {
     const quizObj = await Market.findOne({ makerId: quizId });
     const seller = await User.findById(creatorId);
     if (JSON.stringify(seller._id) === JSON.stringify(buyer._id)) {
+      console.log("hehehehhe, you found the problem");
       return res.status(404).send("You cannot buy your own quiz.");
     }
     if (quizObj.downloadedBy[buyer._id] === undefined) {

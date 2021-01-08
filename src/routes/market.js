@@ -159,6 +159,40 @@ marketRouter.post("/findMarketObj", async (req, res) => {
   const marketObj = await Market.findOne({ makerId: matchNum });
   return res.send(marketObj);
 });
+marketRouter.put("/marketTrends/:userId", async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const user = User.findById(userId);
+    const presTime = Date.now();
+    const markets = await Market.find();
+    let measureObj = {};
+    for (var i = 0; i < markets.length; i++) {
+      let downloadedBy = markets[i].downloadedBy;
+      if (userId === markets[i].makerId) {
+        continue;
+      }
+      if (user.quizzesOwned[markets[i].makerId]) {
+        continue;
+      }
+      if (Object.keys(downloadedBy).length > 0) {
+        for (var key in downloadedBy) {
+          if (presTime - downloadedBy < 3600000) {
+            console.log("shizz might be working");
+          }
+        }
+      }
+    }
+    //find present time
+    // get all markets
+    //create an object that gives us the all
+    //of the downloads for the past hour
+    //create a function that takes in this obj
+    //and either returns to us the top three quizzes//
+    //or, if none are trending, finds us 3 random quizzes
+  } catch (error) {
+    console.log(`You had an error at market.js/marketTrends: ${error}`);
+  }
+});
 marketRouter.post("/updateMarket", async (req, res) => {
   const { newPayload } = req.body;
   const payload = Object.assign({}, newPayload);
