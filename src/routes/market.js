@@ -162,26 +162,41 @@ marketRouter.post("/findMarketObj", async (req, res) => {
 marketRouter.put("/marketTrends/:userId", async (req, res) => {
   try {
     const { userId } = req.params;
-    const user = User.findById(userId);
+    const user = await User.findById(userId);
+    console.log(user, "this is your user");
     const presTime = Date.now();
     const markets = await Market.find();
     let measureObj = {};
     for (var i = 0; i < markets.length; i++) {
       let downloadedBy = markets[i].downloadedBy;
-      if (userId === markets[i].makerId) {
+      if (userId === markets[i].creatorId) {
         continue;
       }
-      if (user.quizzesOwned[markets[i].makerId]) {
+      if (user.quizzesOwned && user.quizzesOwned[markets[i].makerId]) {
         continue;
       }
       if (Object.keys(downloadedBy).length > 0) {
         for (var key in downloadedBy) {
-          if (presTime - downloadedBy < 3600000) {
-            console.log("shizz might be working");
+          if (presTime - downloadedBy[key] > 0) {
+            if (!measureObj[markets[i].makerId]) {
+              measureObj[markets[i].makerId] = 1;
+            } else {
+              measureObj[markets[i].makerId] += 1;
+            }
           }
         }
       }
     }
+    let returnedCollection = [];
+    for (var key in measureObj) {
+      let quiz = await Quiz.findById(key);
+      let returnedQuiz = _.cloneDeep(quiz);
+
+      returnedQuiz._doc.timesDownloaded = measureObj[key];
+      returnedCollection.push(returnedQuiz._doc);
+    }
+    //fix this to only show a top 3 for each!
+    return res.send(returnedCollection);
     //find present time
     // get all markets
     //create an object that gives us the all

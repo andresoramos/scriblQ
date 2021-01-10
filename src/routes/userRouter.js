@@ -91,7 +91,6 @@ userRouter.post("/tradeFunds", async (req, res) => {
     const quizObj = await Market.findOne({ makerId: quizId });
     const seller = await User.findById(creatorId);
     if (JSON.stringify(seller._id) === JSON.stringify(buyer._id)) {
-      console.log("hehehehhe, you found the problem");
       return res.status(404).send("You cannot buy your own quiz.");
     }
     if (quizObj.downloadedBy[buyer._id] === undefined) {
