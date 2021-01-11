@@ -8,6 +8,7 @@ const { Quiz } = require("../models/Quiz");
 const { UserAccount, validateAccount } = require("../models/UserAccount");
 const { User } = require("../models/Users");
 const { ScoredQuiz, validateScoredObject } = require("../models/ScoredQuiz");
+const { truncate } = require("lodash");
 
 const validateObject = (obj) => {
   let alarm = true;
@@ -159,11 +160,116 @@ marketRouter.post("/findMarketObj", async (req, res) => {
   const marketObj = await Market.findOne({ makerId: matchNum });
   return res.send(marketObj);
 });
+marketRouter.put("/mostLiked/:userId", async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const user = await User.findById;
+    const markets = await Market.find();
+    if (markets.length === 0) {
+      return res.send([]);
+    }
+    const sortedMarkets = markets.sort(function (a, b) {
+      return b.likes.total - a.likes.total;
+    });
+    if (sortedMarkets.length > 3) {
+      sortedMarkets.splice(3);
+    }
+    let sortedQuizzes = [];
+    for (var i = 0; i < sortedMarkets.length; i++) {
+      let quiz = await Quiz.findById(sortedMarkets[i].makerId);
+      if (quiz === null) {
+        continue;
+      }
+      if (quiz._doc.creatorId === userId) {
+        quiz._doc.noClick = true;
+      }
+      if (sortedMarkets[i].downloadedBy[userId]) {
+        quiz._doc.noClick = true;
+      }
+      sortedQuizzes.push(quiz._doc);
+    }
+    if (sortedQuizzes.length === 0) {
+      const threeRandomQuizzes = await findThreeRandomQuizzes(userId);
+      sortedQuizzes = threeRandomQuizzes;
+    }
+
+    return res.send(sortedQuizzes);
+    //find markets
+    //if no markets, send back [];
+    //sort these by liked.total
+    //prune down total to three or
+    //be okay if the amount is less than 3
+    //check to see if they're made by you
+    //or owned by you
+    //if so, add noClick
+    //if nothing found, return three random
+    //make sure three random can handle no
+    //quizzes being there, no markets being there
+    //and that it stamps the requisite no click
+    //on the right ones or filters otherwise
+  } catch (error) {
+    console.log(`You had an error at market.js/mostLiked: ${error}`);
+  }
+});
+marketRouter.put("/mostDownloaded/:userId", async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const user = await User.findById(userId);
+    let returnArr = [];
+    const markets = await Market.find();
+    if (markets.length === 0) {
+      return res.send([]);
+    }
+    let counts = {};
+    let holdingArr = [];
+    for (var i = 0; i < markets.length; i++) {
+      counts[markets[i]._id] = markets[i].downloadedBy
+        ? Object.keys(markets[i].downloadedBy).length
+        : 0;
+    }
+    for (var key in counts) {
+      holdingArr.push({ id: key, count: counts[key] });
+    }
+    const sortedArr = holdingArr.sort(function (a, b) {
+      return b.count - a.count;
+    });
+    if (sortedArr.length > 3) {
+      sortedArr.splice(3);
+    }
+    for (var i = 0; i < sortedArr.length; i++) {
+      let market = await Market.findById(
+        mongoose.Types.ObjectId(sortedArr[i].id)
+      );
+      if (market === null) {
+        continue;
+      }
+      let pushedQuiz = await Quiz.findById(market.makerId);
+      if (pushedQuiz === null) {
+        continue;
+      }
+      if (pushedQuiz.creatorId === userId) {
+        pushedQuiz._doc.noClick = true;
+      }
+      if (market.downloadedBy[userId]) {
+        pushedQuiz._doc.noClick = true;
+      }
+      returnArr.push(pushedQuiz._doc);
+    }
+    if (returnArr.length === 0) {
+      const threeRandomQuizzes = await findThreeRandomQuizzes(userId);
+      returnArr = threeRandomQuizzes;
+    }
+
+    return res.send(returnArr);
+    //if no quizzes, come up with a patch to offer front end
+  } catch (error) {
+    console.log(`You had an error at market.js/mostDownloaded: ${error}`);
+  }
+});
 marketRouter.put("/marketTrends/:userId", async (req, res) => {
   try {
     const { userId } = req.params;
     const user = await User.findById(userId);
-    console.log(user, "this is your user");
     const presTime = Date.now();
     const markets = await Market.find();
     let measureObj = {};
@@ -189,25 +295,63 @@ marketRouter.put("/marketTrends/:userId", async (req, res) => {
     }
     let returnedCollection = [];
     for (var key in measureObj) {
+      if (returnedCollection.length === 3) {
+        break;
+      }
       let quiz = await Quiz.findById(key);
       let returnedQuiz = _.cloneDeep(quiz);
 
       returnedQuiz._doc.timesDownloaded = measureObj[key];
       returnedCollection.push(returnedQuiz._doc);
     }
-    //fix this to only show a top 3 for each!
+    console.log(returnedCollection, "this should be an empty array");
+    if (returnedCollection.length === 0) {
+      const threeRandomQuizzes = await findThreeRandomQuizzes(userId);
+      returnedCollection = threeRandomQuizzes;
+    }
+
     return res.send(returnedCollection);
-    //find present time
-    // get all markets
-    //create an object that gives us the all
-    //of the downloads for the past hour
-    //create a function that takes in this obj
-    //and either returns to us the top three quizzes//
-    //or, if none are trending, finds us 3 random quizzes
   } catch (error) {
     console.log(`You had an error at market.js/marketTrends: ${error}`);
   }
 });
+const findThreeRandomQuizzes = async (userId) => {
+  const getRandomInt = (max) => {
+    return Math.floor(Math.random() * Math.floor(max));
+  };
+  const user = await User.findById(userId);
+  //find quizzes by market first
+  const markets = await Market.find();
+  let quizzes = [];
+  for (var i = 0; i < markets.length; i++) {
+    let quiz = await Quiz.findById(markets[i].makerId);
+    if (quiz === null) {
+      continue;
+    }
+    quizzes.push(quiz._doc);
+  }
+  //add to quizzes the quiz that corresponds
+  //to each market
+  let returnedQuizzes = [];
+  let trackKeeper = [];
+  while (returnedQuizzes.length < 3 && trackKeeper.length !== quizzes.length) {
+    let i = getRandomInt(quizzes.length);
+    if (!trackKeeper.includes(i)) {
+      trackKeeper.push(i);
+    } else {
+      continue;
+    }
+
+    if (quizzes[i].creatorId === userId) {
+      continue;
+    }
+    if (user.quizzesOwned && user.quizzesOwned[quizzes[i]._id]) {
+      continue;
+    }
+    returnedQuizzes.push(quizzes[i]);
+  }
+  return { unsorted: true, returnedQuizzes };
+};
 marketRouter.post("/updateMarket", async (req, res) => {
   const { newPayload } = req.body;
   const payload = Object.assign({}, newPayload);
