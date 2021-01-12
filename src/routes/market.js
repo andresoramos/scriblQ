@@ -356,10 +356,7 @@ marketRouter.post("/updateMarket", async (req, res) => {
   const { newPayload } = req.body;
   const payload = Object.assign({}, newPayload);
   const present = await Market.findById(payload.quizId);
-  console.log(
-    present,
-    `This is the quizId: ${payload.quizId}, preceded by the present object`
-  );
+
   const newPresent = _.cloneDeep(present._doc);
   // const newPresent = { ...present };
 
