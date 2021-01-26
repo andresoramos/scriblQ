@@ -582,7 +582,6 @@ quizRouter.put("/deleteQuiz", async (req, res) => {
     const secondQuizCopy = [...pruneQuizArray];
     const quizId = secondQuizCopy[index].quizId;
     pruneQuizArray.splice(index, 1);
-    console.log("Not past updated");
     const updated = await UserAccount.update(
       { _id: findAccount._id },
       { $set: { quizzes: pruneQuizArray } }
@@ -597,7 +596,6 @@ quizRouter.put("/deleteQuiz", async (req, res) => {
 
 quizRouter.post("/savedQuiz", async (req, res) => {
   try {
-    console.log("Don't despair!  You're doing your best!");
     const user = await User.findById(req.body.userId);
     const userId = user._id;
     const userAccounts = await UserAccount.find();
